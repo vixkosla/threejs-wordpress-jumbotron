@@ -124,6 +124,8 @@ export default class GMaterial {
   cloneWithColor(color) {
     const cloned = this.material.clone();
     cloned.color.set(color);
+    // Сохраняем оригинальный цвет клона
+    cloned.userData.originalColor = color;
     // Регистрируем клон для обновлений
     this.clonedMaterials.push(cloned);
     return cloned;
@@ -133,24 +135,35 @@ export default class GMaterial {
    * Обновить материал из текущих параметров
    */
   updateFromParams() {
-    // Обновляем базовый материал
-    this.updateMaterial(this.material);
+    // Обновляем базовый материал (с обновлением цвета)
+    this.updateMaterial(this.material, true);
     
-    // Обновляем все клонированные материалы
+    // Обновляем все клонированные материалы (без обновления цвета)
     for (const mat of this.clonedMaterials) {
-      this.updateMaterial(mat);
+      this.updateMaterial(mat, false);
     }
   }
 
   /**
    * Обновить конкретный материал
+   * @param {THREE.MeshPhysicalMaterial} material 
+   * @param {boolean} isBase - базовый это материал или клон
    */
-  updateMaterial(material) {
+  updateMaterial(material, isBase = false) {
     material.transmission = this.params.transmission;
     material.thickness = this.params.thickness;
     material.roughness = this.params.roughness;
     material.ior = this.params.ior;
-    material.color.set(this.params.color);
+    
+    // Цвет обновляем только для базового материала
+    // Клоны сохраняют свой оригинальный цвет
+    if (isBase) {
+      material.color.set(this.params.color);
+    } else if (material.userData.originalColor !== undefined) {
+      // Восстанавливаем оригинальный цвет клона
+      material.color.set(material.userData.originalColor);
+    }
+    
     material.metalness = this.params.metalness;
     material.reflectivity = this.params.reflectivity;
     material.clearcoat = this.params.clearcoat;
