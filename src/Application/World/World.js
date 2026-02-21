@@ -73,9 +73,11 @@ export default class World {
     );
     this.items.push(this.backlightHexagon1);
 
-    // Шестиугольник 2: в соседней декарте слева
-    // Камера на (8, 3, -8) → слева: (-8, -3, 8)
-    const position2 = new THREE.Vector3(-8, -3, 8);
+    // Шестиугольник 2: в соседней декарте слева (поворот на 90° по часовой)
+    // Было: (-8, -3, 8) - сзади-слева
+    // Поворот на 90° по часовой вокруг Y: (x, y, z) → (z, y, -x)
+    // Стало: (8, -3, 8) - слева по часовой
+    const position2 = new THREE.Vector3(8, -3, 8);
     this.backlightHexagon2 = new BacklightHexagon(
       this.scene,
       boundingBox,
