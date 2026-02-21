@@ -230,26 +230,29 @@ export default class MyModel {
     // this.mesh.rotation.y = time * 0.5;
     // this.mesh.rotation.x = time * 0.2;
 
-    // Анимация от мыши - "отталкивание" блоков от центра
+    // Анимация отталкивания блоков от мыши
+    // Вектор работает только в направлении ОТ центра (по нормали)
     this.meshes.forEach((mesh, index) => {
       const pushVector = this.pushVectors[index];
       if (pushVector && pushVector.length() > 0) {
-        // Сохраняем оригинальную позицию (из initialPosition если есть)
+        // Сохраняем оригинальную позицию
         const originalPos = mesh.userData.initialPosition || mesh.position.clone();
         if (!mesh.userData.initialPosition) {
           mesh.userData.initialPosition = originalPos.clone();
         }
         
-        // Смещение на основе позиции мыши * вектор направления * амортизация
-        const offsetX = this.mouse.x * pushVector.x * this.dampingFactor;
-        const offsetZ = this.mouse.y * pushVector.z * this.dampingFactor;
-        const offsetY = this.mouse.y * pushVector.y * this.dampingFactor * 0.5;
+        // Вычисляем скалярное произведение позиции мыши на вектор направления
+        // Это даст нам "проекцию" мыши на направление вектора
+        const mouseDotVector = this.mouse.x * pushVector.x + this.mouse.y * pushVector.y;
         
-        mesh.position.set(
-          originalPos.x + offsetX,
-          originalPos.y + offsetY,
-          originalPos.z + offsetZ
-        );
+        // Используем только положительное значение (от центра наружу)
+        // Если отрицательное — обнуляем (блок не движется обратно)
+        const directionFactor = Math.max(0, mouseDotVector);
+        
+        // Смещение = направление * сила * амортизация
+        const offset = pushVector.clone().multiplyScalar(directionFactor * this.dampingFactor);
+        
+        mesh.position.addVectors(originalPos, offset);
       }
     });
 
