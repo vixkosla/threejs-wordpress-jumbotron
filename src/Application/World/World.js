@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import MyModel from "./MyModel.js";
 import BacklightHexagon from "./BacklightHexagon.js";
+import GUI from "lil-gui";
 
 export default class World {
   constructor(scene) {
@@ -11,16 +12,29 @@ export default class World {
     this.setupHelpers();
     this.setupObjects();
     this.setupBacklight();
+    this.setupLightsGUI();
   }
 
   setupLights() {
-    // Базовый свет
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-    this.scene.add(ambientLight);
+    // Ambient light
+    this.ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+    this.scene.add(this.ambientLight);
 
-    const pointLight = new THREE.DirectionalLight(0xffffff, 1);
-    pointLight.position.set(5, 5, 5);
-    this.scene.add(pointLight);
+    // Directional light
+    this.directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    this.directionalLight.position.set(5, 5, 5);
+    this.scene.add(this.directionalLight);
+
+    // Параметры для GUI
+    this.lightParams = {
+      ambientIntensity: 0.3,
+      ambientColor: 0xffffff,
+      directionalIntensity: 0.5,
+      directionalColor: 0xffffff,
+      directionalX: 5,
+      directionalY: 5,
+      directionalZ: 5,
+    };
   }
 
   setupHelpers() {
@@ -42,10 +56,53 @@ export default class World {
   setupBacklight() {
     // Получаем bounding box композиции для расчёта размера шестиугольника
     const boundingBox = this.myModel.getBoundingBox();
-    
+
     // Шестиугольник-подсветка сзади для transmission-эффекта
     this.backlightHexagon = new BacklightHexagon(this.scene, boundingBox);
     this.items.push(this.backlightHexagon);
+  }
+
+  setupLightsGUI() {
+    const gui = new GUI({ title: "Scene Lights" });
+
+    const folderAmbient = gui.addFolder("Ambient Light");
+    folderAmbient.addColor(this.lightParams, "ambientColor")
+      .name("Color")
+      .onChange((value) => {
+        this.ambientLight.color.set(value);
+      });
+    folderAmbient.add(this.lightParams, "ambientIntensity", 0, 2, 0.05)
+      .name("Intensity")
+      .onChange((value) => {
+        this.ambientLight.intensity = value;
+      });
+
+    const folderDirectional = gui.addFolder("Directional Light");
+    folderDirectional.addColor(this.lightParams, "directionalColor")
+      .name("Color")
+      .onChange((value) => {
+        this.directionalLight.color.set(value);
+      });
+    folderDirectional.add(this.lightParams, "directionalIntensity", 0, 5, 0.1)
+      .name("Intensity")
+      .onChange((value) => {
+        this.directionalLight.intensity = value;
+      });
+    folderDirectional.add(this.lightParams, "directionalX", -20, 20, 0.5)
+      .name("Position X")
+      .onChange((value) => {
+        this.directionalLight.position.x = value;
+      });
+    folderDirectional.add(this.lightParams, "directionalY", -20, 20, 0.5)
+      .name("Position Y")
+      .onChange((value) => {
+        this.directionalLight.position.y = value;
+      });
+    folderDirectional.add(this.lightParams, "directionalZ", -20, 20, 0.5)
+      .name("Position Z")
+      .onChange((value) => {
+        this.directionalLight.position.z = value;
+      });
   }
 
   // Метод для вызова действия у модели извне

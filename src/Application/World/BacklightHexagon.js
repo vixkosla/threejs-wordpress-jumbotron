@@ -16,7 +16,7 @@ export default class BacklightHexagon {
 
     // Параметры света
     this.params = {
-      intensity: 3,            // сила света RectAreaLight (уменьшено)
+      intensity: 0.5,          // сила света RectAreaLight (очень мягкий свет)
       hexagonOpacity: 1.0,     // непрозрачность шестиугольника
       hexagonVisible: true,    // показывать ли шестиугольник
     };
@@ -128,27 +128,27 @@ export default class BacklightHexagon {
   setupGUI() {
     this.gui = new GUI({ title: "Backlight Hexagon" });
 
-    const folderLight = this.gui.addFolder("Свет");
-    folderLight.add(this.params, "intensity", 0, 10, 0.1)
+    const folderLight = this.gui.addFolder("Backlight");
+    folderLight.add(this.params, "intensity", 0, 2, 0.05)
       .name("Intensity")
       .onChange(() => this.updateFromParams());
 
-    const folderHex = this.gui.addFolder("Шестиугольник");
+    const folderHex = this.gui.addFolder("Hexagon");
     folderHex.add(this.params, "hexagonOpacity", 0, 1, 0.05)
       .name("Opacity")
       .onChange(() => this.updateFromParams());
     folderHex.add(this.params, "hexagonVisible")
-      .name("Видимый")
+      .name("Visible")
       .onChange(() => this.updateFromParams());
 
     // Кнопка сброса
     this.gui.add({ reset: () => this.resetParams() }, "reset")
-      .name("↻ Сбросить");
+      .name("↻ Reset");
   }
 
   resetParams() {
     this.params = {
-      intensity: 3,
+      intensity: 0.5,
       hexagonOpacity: 1.0,
       hexagonVisible: true,
     };
