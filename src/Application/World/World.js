@@ -62,9 +62,27 @@ export default class World {
     // Получаем bounding box композиции для расчёта размера шестиугольника
     const boundingBox = this.myModel.getBoundingBox();
 
-    // Шестиугольник-подсветка сзади для transmission-эффекта
-    this.backlightHexagon = new BacklightHexagon(this.scene, boundingBox);
-    this.items.push(this.backlightHexagon);
+    // Шестиугольник 1: ближе к камере (основной свет)
+    // Камера на (8, 3, -8), шестиугольник на (-4, -1.5, 4) - ближе к композиции
+    const position1 = new THREE.Vector3(-4, -1.5, 4);
+    this.backlightHexagon1 = new BacklightHexagon(
+      this.scene,
+      boundingBox,
+      position1,
+      "(Front)"
+    );
+    this.items.push(this.backlightHexagon1);
+
+    // Шестиугольник 2: в соседней декарте справа
+    // Справа от камеры: (8, 3, -8) → зеркально справа: (8, -3, 8)
+    const position2 = new THREE.Vector3(8, -3, 8);
+    this.backlightHexagon2 = new BacklightHexagon(
+      this.scene,
+      boundingBox,
+      position2,
+      "(Right)"
+    );
+    this.items.push(this.backlightHexagon2);
   }
 
   setupLightsGUI() {

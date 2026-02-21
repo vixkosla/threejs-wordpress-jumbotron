@@ -10,9 +10,10 @@ import GUI from "lil-gui";
  * Размер: рассчитывается от bounding box композиции
  */
 export default class BacklightHexagon {
-  constructor(scene, boundingBox) {
+  constructor(scene, boundingBox, positionOffset = null, label = "") {
     this.scene = scene;
     this.gui = null;
+    this.label = label;
 
     // Параметры света
     this.params = {
@@ -25,7 +26,13 @@ export default class BacklightHexagon {
 
     // Позиция: зеркально камере относительно (0,0,0)
     // Камера на (8, 3, -8) → шестиугольник на (-8, -3, 8)
-    this.position = new THREE.Vector3(-8, -3, 8);
+    if (positionOffset) {
+      // Если есть смещение, используем его
+      this.position = new THREE.Vector3().copy(positionOffset);
+    } else {
+      // По умолчанию зеркально камере
+      this.position = new THREE.Vector3(-8, -3, 8);
+    }
     this.lookAtTarget = new THREE.Vector3(0, 0, 0);
 
     // Рассчитываем размер шестиугольника от bounding box
@@ -144,7 +151,8 @@ export default class BacklightHexagon {
    * Настроить GUI
    */
   setupGUI() {
-    this.gui = new GUI({ title: "Backlight Hexagon" });
+    const title = this.label ? `Backlight ${this.label}` : "Backlight Hexagon";
+    this.gui = new GUI({ title });
 
     const folderLight = this.gui.addFolder("Backlight");
     folderLight.add(this.params, "intensity", 0, 30, 0.5)
