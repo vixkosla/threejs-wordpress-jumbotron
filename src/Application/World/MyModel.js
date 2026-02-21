@@ -78,6 +78,10 @@ export default class MyModel {
 
     // Позиция мыши (нормализованная от -1 до 1)
     this.mouse = new THREE.Vector2(0, 0);
+    this.prevMouse = new THREE.Vector2(0, 0);
+    
+    // Скорость мыши для эффекта "ветра"
+    this.mouseVelocity = new THREE.Vector2(0, 0);
     
     // Векторы смещения для каждого блока (направление "отталкивания")
     // Порядок соответствует ginformation массиву
@@ -92,8 +96,14 @@ export default class MyModel {
       new THREE.Vector3(-1, 0, 0),   // 5: левый дальний - влево
     ];
     
-    // Коэффициент амортизации (уменьшает влияние мыши)
-    this.dampingFactor = 0.5;
+    // Чувствительность к движению мыши (реагирует на малейшее движение)
+    this.sensitivity = 2.0;
+    
+    // Затухание "лепестков" (возврат на место)
+    this.returnSpeed = 0.05;
+    
+    // Максимальное смещение
+    this.maxOffset = 2.0;
 
     this.composeCube();
     this.translateBlocks();
@@ -230,7 +240,15 @@ export default class MyModel {
    * Обновить позицию мыши
    */
   updateMousePosition(mouse) {
+    // Сохраняем предыдущую позицию
+    this.prevMouse.copy(this.mouse);
+    
+    // Обновляем текущую
     this.mouse.copy(mouse);
+    
+    // Вычисляем скорость мыши (разница между кадрами)
+    this.mouseVelocity.x = this.mouse.x - this.prevMouse.x;
+    this.mouseVelocity.y = this.mouse.y - this.prevMouse.y;
   }
 
   // Вызывается каждый кадр
@@ -239,9 +257,8 @@ export default class MyModel {
     // this.mesh.rotation.y = time * 0.5;
     // this.mesh.rotation.x = time * 0.2;
 
-    // Анимация отталкивания блоков от мыши
-    // Вектор работает только в направлении ОТ центра (по нормали)
-    // 2D проекция: векторы должны расходиться чтобы блоки не пересекались
+    // Анимация "лепестки на ветру"
+    // Блоки реагируют на малейшее движение мыши и плавно возвращаются
     this.meshes.forEach((mesh, index) => {
       const pushVector = this.pushVectors[index];
       if (pushVector && pushVector.length() > 0) {
@@ -249,17 +266,30 @@ export default class MyModel {
         const originalPos = mesh.userData.initialPosition || mesh.position.clone();
         if (!mesh.userData.initialPosition) {
           mesh.userData.initialPosition = originalPos.clone();
+          mesh.userData.currentOffset = 0; // Текущее смещение от originalPos
         }
         
-        // 2D скалярное произведение (X, Y) - проверяем направление на экране
-        const mouseDotVector = this.mouse.x * pushVector.x + this.mouse.y * pushVector.y;
+        // 2D скалярное произведение скорости мыши на вектор направления
+        // Реагируем только на движение в направлении вектора
+        const velocityDotVector = 
+          this.mouseVelocity.x * pushVector.x + 
+          this.mouseVelocity.y * pushVector.y;
         
-        // Используем только положительное значение (от центра наружу)
-        const directionFactor = Math.max(0, mouseDotVector);
+        // Если мышь движется в направлении вектора — добавляем энергию
+        if (velocityDotVector > 0) {
+          mesh.userData.currentOffset += velocityDotVector * this.sensitivity;
+          // Ограничиваем максимальное смещение
+          mesh.userData.currentOffset = Math.min(
+            mesh.userData.currentOffset, 
+            this.maxOffset
+          );
+        }
         
-        // Смещение = направление * сила * амортизация
-        const offset = pushVector.clone().multiplyScalar(directionFactor * this.dampingFactor);
+        // Плавный возврат на место (затухание как у лепестка)
+        mesh.userData.currentOffset *= (1 - this.returnSpeed);
         
+        // Применяем смещение по вектору
+        const offset = pushVector.clone().multiplyScalar(mesh.userData.currentOffset);
         mesh.position.addVectors(originalPos, offset);
       }
     });
