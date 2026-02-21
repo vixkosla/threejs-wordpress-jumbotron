@@ -1,12 +1,10 @@
 import * as THREE from "three";
 import GMaterial from "./Materials/GMaterial.js";
-import * as CANNON from "cannon-es";
 
 // Цвета для блоков (мягкие, полупрозрачные оттенки)
-// Фиолетовый - лёгкий пастельный с синим оттенком
-const COLOR_PURPLE = 0xb8b8ff; // лёгкий фиолетово-синий (пастельный)
-const COLOR_LIME = 0xa3e635;    // мягкий салатовый (свежее яблоко)
-const COLOR_GLASS = 0xf8f9fa;   // стеклянный белый (полупрозрачный пластик)
+const COLOR_PURPLE = 0xb8b8ff; // лёгкий фиолетово-синий
+const COLOR_LIME = 0xa3e635;    // мягкий салатовый
+const COLOR_GLASS = 0xf8f9fa;   // стеклянный белый
 
 // Нумерация блоков (вид сверху, слева направо):
 // Верхний слой (y=2.5):
@@ -76,22 +74,14 @@ export default class MyModel {
 
     this.meshes = [];
     this.group = new THREE.Object3D();
-    // Передаём scene для работы GUI
     this.gMaterial = new GMaterial(scene);
 
-    // Физический мир cannon-es
-    this.world = new CANNON.World();
-    this.world.gravity.set(0, 0, 0); // Нет гравитации (гидравлика)
-    
-    // Физические тела для каждого блока
-    this.physicsBodies = [];
-    
     // Позиция мыши (нормализованная от -1 до 1)
     this.mouse = new THREE.Vector2(0, 0);
     this.prevMouse = new THREE.Vector2(0, 0);
     
-    // Скорость мыши (вектор)
-    this.mouseVelocity = new THREE.Vector2(0, 0);
+    // Дельта движения мыши
+    this.mouseDelta = new THREE.Vector2(0, 0);
     
     // Векторы направления для каждого блока
     this.pushVectors = [
@@ -103,65 +93,53 @@ export default class MyModel {
       new THREE.Vector3(-1, 0, 0),     // 5: левый дальний - влево
     ];
     
-    // Параметры физики
-    this.forceMultiplier = 50;  // Множитель силы (для заметности)
-    this.damping = 0.90;         // Затухание скорости (плавное возвращение)
-    this.maxForce = 200;         // Максимальная сила
+    // Параметры анимации (как в r3f-rapier-ball-of-glass)
+    this.ease = 0.02;        // Скорость интерполяции
+    this.friction = 0.1;     // Затухание (инерция)
+    
+    // Для каждого блока: target (накапливает) и current (текущее)
+    this.blockTargets = [];
+    this.blockCurrents = [];
+    
+    // Инициализация
+    for (let i = 0; i < 6; i++) {
+      this.blockTargets.push(new THREE.Vector3(0, 0, 0));
+      this.blockCurrents.push(new THREE.Vector3(0, 0, 0));
+    }
 
     this.composeCube();
     this.translateBlocks();
-    this.setupPhysics();
   }
 
   /**
-   * Настроить физику для каждого блока
-   */
-  setupPhysics() {
-    this.meshes.forEach((mesh, index) => {
-      // Вычисляем размер блока из bounding box
-      const bbox = new THREE.Box3().setFromObject(mesh);
-      const size = new THREE.Vector3();
-      bbox.getSize(size);
-      
-      // Создаём физическое тело (размер соответствует мешу)
-      const shape = new CANNON.Box(new CANNON.Vec3(size.x / 2, size.y / 2, size.z / 2));
-      const body = new CANNON.Body({
-        mass: 1, // Динамическое тело
-        position: new CANNON.Vec3(
-          mesh.position.x,
-          mesh.position.y,
-          mesh.position.z
-        ),
-        linearDamping: this.damping,
-        angularDamping: 0.99, // Блокируем вращение
-      });
-
-      body.addShape(shape);
-      this.world.addBody(body);
-      this.physicsBodies.push(body);
-
-      // Сохраняем оригинальную позицию
-      mesh.userData.originalPosition = mesh.position.clone();
-      mesh.userData.physicsIndex = index;
-    });
-  }
-
-  /**
-   * Обновить позицию мыши
+   * Обновить позицию мыши и вычислить дельту
    */
   updateMousePosition(mouse) {
-    // Сохраняем предыдущую позицию
+    // Сохраняем предыдущую
     this.prevMouse.copy(this.mouse);
     
     // Обновляем текущую
     this.mouse.copy(mouse);
     
-    // Вычисляем скорость мыши
-    this.mouseVelocity.x = this.mouse.x - this.prevMouse.x;
-    this.mouseVelocity.y = this.mouse.y - this.prevMouse.y;
+    // Вычисляем дельту (как useMouseMoveDelta)
+    this.mouseDelta.x = this.mouse.x - this.prevMouse.x;
+    this.mouseDelta.y = this.mouse.y - this.prevMouse.y;
     
-    // Плавное затухание скорости мыши (для плавности)
-    this.mouseVelocity.multiplyScalar(0.9);
+    // Накпливаем target для каждого блока
+    for (let i = 0; i < 6; i++) {
+      const pushVector = this.pushVectors[i];
+      if (pushVector && pushVector.length() > 0) {
+        // Скалярное произведение дельты на вектор направления
+        const deltaDotVector = 
+          this.mouseDelta.x * pushVector.x + 
+          this.mouseDelta.y * pushVector.y;
+        
+        // Накпливаем target
+        this.blockTargets[i].x += pushVector.x * deltaDotVector;
+        this.blockTargets[i].y += pushVector.y * deltaDotVector;
+        this.blockTargets[i].z += pushVector.z * deltaDotVector;
+      }
+    }
   }
 
   composeCube() {
@@ -170,6 +148,10 @@ export default class MyModel {
       g.position.set(...info.position);
       g.rotation.set(...info.rotation);
       g.scale.set(0.8, 0.8, 0.8);
+      
+      // Сохраняем оригинальную позицию для анимации
+      g.userData.originalPosition = g.position.clone();
+      
       this.meshes.push(g);
       this.group.add(g);
       this.scene.add(g);
@@ -180,6 +162,10 @@ export default class MyModel {
       t.position.set(...info.position);
       t.rotation.set(...info.rotation);
       t.scale.set(0.85, 0.85, 0.85);
+      
+      // Сохраняем оригинальную позицию
+      t.userData.originalPosition = t.position.clone();
+      
       this.scene.add(t);
     });
   }
@@ -290,47 +276,42 @@ export default class MyModel {
   }
 
   // Вызывается каждый кадр
-  update(time, deltaTime = 1 / 60) {
-    // Обновляем физический мир с правильным deltaTime
-    this.world.step(deltaTime);
-
-    // Применяем силу от мыши к каждому блоку
-    this.physicsBodies.forEach((body, index) => {
-      const pushVector = this.pushVectors[index];
-      if (pushVector && pushVector.length() > 0) {
-        // Скалярное произведение скорости мыши на вектор направления
-        const velocityDotVector =
-          this.mouseVelocity.x * pushVector.x +
-          this.mouseVelocity.y * pushVector.y;
-
-        // Применяем силу (плавная передача движения)
-        const force = velocityDotVector * this.forceMultiplier;
-        
-        // Ограничиваем максимальную силу
-        const clampedForce = Math.max(-this.maxForce, Math.min(force, this.maxForce));
-
-        // Применяем силу в направлении вектора
-        body.applyForce(
-          new CANNON.Vec3(
-            pushVector.x * clampedForce,
-            pushVector.y * clampedForce,
-            pushVector.z * clampedForce
-          ),
-          body.position
-        );
+  update(time) {
+    // Плавная интерполяция как в useAnimatableVec3
+    for (let i = 0; i < 6; i++) {
+      const target = this.blockTargets[i];
+      const current = this.blockCurrents[i];
+      
+      // Затухание target к нулю (инерция)
+      target.x = this.lerp(target.x, 0, this.friction);
+      target.y = this.lerp(target.y, 0, this.friction);
+      target.z = this.lerp(target.z, 0, this.friction);
+      
+      // Плавная интерполяция current к target
+      current.x = this.lerp(current.x, target.x, this.ease);
+      current.y = this.lerp(current.y, target.y, this.ease);
+      current.z = this.lerp(current.z, target.z, this.ease);
+      
+      // Применяем смещение к мешу
+      const mesh = this.meshes[i];
+      if (mesh && mesh.userData.originalPosition) {
+        mesh.position.x = mesh.userData.originalPosition.x + current.x;
+        mesh.position.y = mesh.userData.originalPosition.y + current.y;
+        mesh.position.z = mesh.userData.originalPosition.z + current.z;
       }
-
-      // Синхронизируем позицию меша с физическим телом
-      const mesh = this.meshes.find(m => m.userData.physicsIndex === index);
-      if (mesh) {
-        mesh.position.copy(body.position);
-      }
-    });
+    }
 
     // Логика "событийной" анимации
     if (this.isActive) {
       // this.mesh.scale.set(1.5, 1.5, 1.5); // Пример реакции
     }
+  }
+  
+  /**
+   * Линейная интерполяция
+   */
+  lerp(a, b, t) {
+    return a + (b - a) * t;
   }
 
   /**
