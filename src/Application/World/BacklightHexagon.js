@@ -16,9 +16,11 @@ export default class BacklightHexagon {
 
     // Параметры света
     this.params = {
-      intensity: 0.5,          // сила света RectAreaLight (очень мягкий свет)
-      hexagonOpacity: 1.0,     // непрозрачность шестиугольника
-      hexagonVisible: true,    // показывать ли шестиугольник
+      intensity: 5,              // сила света RectAreaLight
+      hexagonOpacity: 1.0,       // непрозрачность шестиугольника
+      hexagonVisible: true,      // показывать ли шестиугольник
+      addLightBehind: true,      // дополнительный свет сзади для transmission
+      addLightIntensity: 10,     // интенсивность заднего света
     };
 
     // Позиция: зеркально камере относительно (0,0,0)
@@ -39,6 +41,10 @@ export default class BacklightHexagon {
     // Создаём RectAreaLight (источник света)
     this.rectLight = this.createRectAreaLight();
     this.group.add(this.rectLight);
+
+    // Дополнительный PointLight сзади для transmission эффекта
+    this.backLight = this.createBackLight();
+    this.group.add(this.backLight);
 
     this.group.position.copy(this.position);
     this.group.lookAt(this.lookAtTarget);
@@ -114,6 +120,15 @@ export default class BacklightHexagon {
     return light;
   }
 
+  createBackLight() {
+    // PointLight сзади шестиугольника для transmission эффекта
+    const intensity = this.params.addLightIntensity;
+    const light = new THREE.PointLight(0xffffff, intensity, 50);
+    // Размещаем сзади шестиугольника (дальше от сцены)
+    light.position.set(0, 0, 3);
+    return light;
+  }
+
   /**
    * Обновить настройки света
    */
@@ -121,6 +136,8 @@ export default class BacklightHexagon {
     this.rectLight.intensity = this.params.intensity;
     this.hexagonMesh.material.opacity = this.params.hexagonOpacity;
     this.hexagonMesh.visible = this.params.hexagonVisible;
+    this.backLight.intensity = this.params.addLightIntensity;
+    this.backLight.visible = this.params.addLightBehind;
   }
 
   /**
@@ -130,8 +147,15 @@ export default class BacklightHexagon {
     this.gui = new GUI({ title: "Backlight Hexagon" });
 
     const folderLight = this.gui.addFolder("Backlight");
-    folderLight.add(this.params, "intensity", 0, 2, 0.05)
-      .name("Intensity")
+    folderLight.add(this.params, "intensity", 0, 10, 0.1)
+      .name("RectArea Intensity")
+      .onChange(() => this.updateFromParams());
+
+    folderLight.add(this.params, "addLightBehind")
+      .name("Add Back Light")
+      .onChange(() => this.updateFromParams());
+    folderLight.add(this.params, "addLightIntensity", 0, 20, 0.5)
+      .name("Back Light Intensity")
       .onChange(() => this.updateFromParams());
 
     const folderHex = this.gui.addFolder("Hexagon");
@@ -149,9 +173,11 @@ export default class BacklightHexagon {
 
   resetParams() {
     this.params = {
-      intensity: 0.5,
+      intensity: 5,
       hexagonOpacity: 1.0,
       hexagonVisible: true,
+      addLightBehind: true,
+      addLightIntensity: 10,
     };
     this.updateFromParams();
     if (this.gui) {
@@ -182,6 +208,10 @@ export default class BacklightHexagon {
 
     if (this.group) {
       this.scene.remove(this.group);
+    }
+
+    if (this.backLight) {
+      this.backLight.dispose?.();
     }
   }
 }
