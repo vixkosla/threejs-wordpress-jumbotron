@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import GMaterial from "./Materials/GMaterial.js";
+import { gsap } from "gsap";
 
 // Цвета для блоков (мягкие, полупрозрачные оттенки)
 // Фиолетовый - лёгкий пастельный с синим оттенком
@@ -80,13 +81,12 @@ export default class MyModel {
     this.mouse = new THREE.Vector2(0, 0);
     this.prevMouse = new THREE.Vector2(0, 0);
     
-    // Скорость мыши для эффекта "ветра"
+    // Скорость мыши (абсолютная величина ускорения)
     this.mouseVelocity = new THREE.Vector2(0, 0);
+    this.mouseAcceleration = 0; // Скалярная величина ускорения
     
     // Векторы смещения для каждого блока (направление "отталкивания")
     // Порядок соответствует ginformation массиву
-    // Формат: [x, y, z] - направление от центра
-    // В 2D проекции (вид с камеры) векторы должны расходиться от центра
     this.pushVectors = [
       new THREE.Vector3(-1, 0, 0),   // 0: левый нижний - влево
       new THREE.Vector3(0, 1, 0),    // 1: центральный верхний - вверх
@@ -96,14 +96,17 @@ export default class MyModel {
       new THREE.Vector3(-1, 0, 0),   // 5: левый дальний - влево
     ];
     
-    // Чувствительность к движению мыши (реагирует на малейшее движение)
-    this.sensitivity = 2.0;
+    // Чувствительность к ускорению мыши
+    this.sensitivity = 3.0;
     
-    // Затухание "лепестков" (возврат на место)
-    this.returnSpeed = 0.05;
+    // Максимальная амплитуда "взмаха"
+    this.maxAmplitude = 3.0;
     
-    // Максимальное смещение
-    this.maxOffset = 2.0;
+    // Длительность возврата (секунды) - "перышко"
+    this.returnDuration = 1.5;
+    
+    // Храним GSAP твины для каждого блока
+    this.blockTweens = [];
 
     this.composeCube();
     this.translateBlocks();
@@ -246,9 +249,14 @@ export default class MyModel {
     // Обновляем текущую
     this.mouse.copy(mouse);
     
-    // Вычисляем скорость мыши (разница между кадрами)
+    // Вычисляем скорость (вектор)
     this.mouseVelocity.x = this.mouse.x - this.prevMouse.x;
     this.mouseVelocity.y = this.mouse.y - this.prevMouse.y;
+    
+    // Вычисляем абсолютную величину ускорения (скаляр)
+    this.mouseAcceleration = Math.sqrt(
+      this.mouseVelocity.x ** 2 + this.mouseVelocity.y ** 2
+    );
   }
 
   // Вызывается каждый кадр
@@ -257,40 +265,49 @@ export default class MyModel {
     // this.mesh.rotation.y = time * 0.5;
     // this.mesh.rotation.x = time * 0.2;
 
-    // Анимация "лепестки на ветру"
-    // Блоки реагируют на малейшее движение мыши и плавно возвращаются
+    // Анимация "перышко на ветру" с использованием GSAP
     this.meshes.forEach((mesh, index) => {
       const pushVector = this.pushVectors[index];
       if (pushVector && pushVector.length() > 0) {
         // Сохраняем оригинальную позицию
-        const originalPos = mesh.userData.initialPosition || mesh.position.clone();
         if (!mesh.userData.initialPosition) {
-          mesh.userData.initialPosition = originalPos.clone();
-          mesh.userData.currentOffset = 0; // Текущее смещение от originalPos
+          mesh.userData.initialPosition = mesh.position.clone();
+          mesh.userData.currentAmplitude = 0;
         }
         
-        // 2D скалярное произведение скорости мыши на вектор направления
-        // Реагируем только на движение в направлении вектора
+        // 2D скалярное произведение скорости на вектор направления
+        // Проверяем движение в направлении вектора
         const velocityDotVector = 
           this.mouseVelocity.x * pushVector.x + 
           this.mouseVelocity.y * pushVector.y;
         
-        // Если мышь движется в направлении вектора — добавляем энергию
-        if (velocityDotVector > 0) {
-          mesh.userData.currentOffset += velocityDotVector * this.sensitivity;
-          // Ограничиваем максимальное смещение
-          mesh.userData.currentOffset = Math.min(
-            mesh.userData.currentOffset, 
-            this.maxOffset
+        // Если есть ускорение в направлении вектора — запускаем "взмах"
+        if (velocityDotVector > 0.001) {
+          // Вычисляем амплитуду на основе ускорения
+          const amplitude = Math.min(
+            velocityDotVector * this.sensitivity,
+            this.maxAmplitude
           );
+          
+          // Анимация "взмаха" через GSAP
+          gsap.to(mesh.userData, {
+            currentAmplitude: amplitude,
+            duration: 0.3,
+            ease: "power2.out"
+          });
+          
+          // Анимация плавного возврата ("перышко")
+          gsap.to(mesh.userData, {
+            currentAmplitude: 0,
+            duration: this.returnDuration,
+            delay: 0.3,
+            ease: "sine.inOut" // Синусоидальный возврат
+          });
         }
         
-        // Плавный возврат на место (затухание как у лепестка)
-        mesh.userData.currentOffset *= (1 - this.returnSpeed);
-        
-        // Применяем смещение по вектору
-        const offset = pushVector.clone().multiplyScalar(mesh.userData.currentOffset);
-        mesh.position.addVectors(originalPos, offset);
+        // Применяем текущее смещение по вектору
+        const offset = pushVector.clone().multiplyScalar(mesh.userData.currentAmplitude);
+        mesh.position.addVectors(mesh.userData.initialPosition, offset);
       }
     });
 
