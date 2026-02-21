@@ -131,10 +131,8 @@ export default class MyModel {
     const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
     geometry.center();
 
-    // Клонируем материал и задаём цвет
-    const baseMaterial = this.gMaterial.get();
-    const material = baseMaterial.clone();
-    material.color.set(color);
+    // Клонируем материал и задаём цвет (через cloneWithColor для обновления)
+    const material = this.gMaterial.cloneWithColor(color);
 
     const letterG = new THREE.Mesh(geometry, material);
     letterG.scale.set(1.0, 1.0, 1.0);
@@ -179,10 +177,8 @@ export default class MyModel {
     // 4. Центрируем геометрию (опционально)
     geometry.center();
 
-    // 5. Создаём меш с transmission материалом
-    const baseMaterial = this.gMaterial.get();
-    const material = baseMaterial.clone();
-    material.color.set(color);
+    // 5. Создаём меш с transmission материалом (через cloneWithColor для обновления)
+    const material = this.gMaterial.cloneWithColor(color);
     
     const letterT = new THREE.Mesh(geometry, material);
     letterT.castShadow = true;

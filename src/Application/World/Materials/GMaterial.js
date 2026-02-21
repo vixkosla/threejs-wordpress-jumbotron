@@ -27,7 +27,7 @@ export default class GMaterial {
       ior: 1.45,                 // индекс преломления
 
       // Цвет
-      color: G_COLORS[0].hex,    // базовый цвет
+      color: 0xc084fc,    // базовый цвет (лёгкий фиолетовый)
 
       // Эффекты
       metalness: 0.0,            // металличность
@@ -42,6 +42,10 @@ export default class GMaterial {
     };
 
     this.material = this.createMaterial();
+    
+    // Храним ссылки на все клонированные материалы для обновления
+    this.clonedMaterials = [];
+    
     this.setupGUI();
   }
 
@@ -114,12 +118,14 @@ export default class GMaterial {
 
   /**
    * Создать новый материал с тем же конфигом, но другим цветом
-   * @param {number|string|THREE.Color} color 
+   * @param {number|string|THREE.Color} color
    * @returns {THREE.MeshPhysicalMaterial}
    */
   cloneWithColor(color) {
     const cloned = this.material.clone();
     cloned.color.set(color);
+    // Регистрируем клон для обновлений
+    this.clonedMaterials.push(cloned);
     return cloned;
   }
 
@@ -127,16 +133,30 @@ export default class GMaterial {
    * Обновить материал из текущих параметров
    */
   updateFromParams() {
-    this.material.transmission = this.params.transmission;
-    this.material.thickness = this.params.thickness;
-    this.material.roughness = this.params.roughness;
-    this.material.ior = this.params.ior;
-    this.material.color.set(this.params.color);
-    this.material.metalness = this.params.metalness;
-    this.material.reflectivity = this.params.reflectivity;
-    this.material.clearcoat = this.params.clearcoat;
-    this.material.clearcoatRoughness = this.params.clearcoatRoughness;
-    this.material.envMapIntensity = this.params.envMapIntensity;
+    // Обновляем базовый материал
+    this.updateMaterial(this.material);
+    
+    // Обновляем все клонированные материалы
+    for (const mat of this.clonedMaterials) {
+      this.updateMaterial(mat);
+    }
+  }
+
+  /**
+   * Обновить конкретный материал
+   */
+  updateMaterial(material) {
+    material.transmission = this.params.transmission;
+    material.thickness = this.params.thickness;
+    material.roughness = this.params.roughness;
+    material.ior = this.params.ior;
+    material.color.set(this.params.color);
+    material.metalness = this.params.metalness;
+    material.reflectivity = this.params.reflectivity;
+    material.clearcoat = this.params.clearcoat;
+    material.clearcoatRoughness = this.params.clearcoatRoughness;
+    material.envMapIntensity = this.params.envMapIntensity;
+    material.needsUpdate = true;
   }
 
   /**
