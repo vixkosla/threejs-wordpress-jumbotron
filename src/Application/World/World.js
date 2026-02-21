@@ -2,6 +2,11 @@ import * as THREE from "three";
 import MyModel from "./MyModel.js";
 import BacklightHexagon from "./BacklightHexagon.js";
 import GUI from "lil-gui";
+import {
+  HEXAGON_1_POSITION,
+  HEXAGON_2_POSITION,
+  HEXAGON_2_LABEL,
+} from "./Config/HexagonPositions.js";
 
 export default class World {
   constructor(scene) {
@@ -63,8 +68,11 @@ export default class World {
     const boundingBox = this.myModel.getBoundingBox();
 
     // Шестиугольник 1: ближе к камере (основной свет)
-    // Камера на (8, 3, -8), шестиугольник на (-4, -1.5, 4) - ближе к композиции
-    const position1 = new THREE.Vector3(-4, -1.5, 4);
+    const position1 = new THREE.Vector3(
+      HEXAGON_1_POSITION.x,
+      HEXAGON_1_POSITION.y,
+      HEXAGON_1_POSITION.z
+    );
     this.backlightHexagon1 = new BacklightHexagon(
       this.scene,
       boundingBox,
@@ -73,16 +81,18 @@ export default class World {
     );
     this.items.push(this.backlightHexagon1);
 
-    // Шестиугольник 2: в соседней декарте слева (поворот на 90° по часовой)
-    // Было: (-8, -3, 8) - сзади-слева
-    // Поворот на 90° по часовой вокруг Y: (x, y, z) → (z, y, -x)
-    // Стало: (8, -3, 8) - слева по часовой
-    const position2 = new THREE.Vector3(8, -3, 8);
+    // Шестиугольник 2: дальний, в соседней декарте
+    // Координаты в Config/HexagonPositions.js
+    const position2 = new THREE.Vector3(
+      HEXAGON_2_POSITION.x,
+      HEXAGON_2_POSITION.y,
+      HEXAGON_2_POSITION.z
+    );
     this.backlightHexagon2 = new BacklightHexagon(
       this.scene,
       boundingBox,
       position2,
-      "(Left)"
+      HEXAGON_2_LABEL
     );
     this.items.push(this.backlightHexagon2);
   }
