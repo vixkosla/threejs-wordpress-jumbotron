@@ -29,12 +29,14 @@ export default class Application {
     };
 
     this.camera = new THREE.PerspectiveCamera(
-      10,
+      35,
       this.sizes.width / this.sizes.height,
       0.1,
       100,
     );
-    this.camera.position.set(20, 20.0, -20);
+    // Позиция камеры: смотрим на сцену под углом
+    this.camera.position.set(0, 0, 25);
+    this.camera.lookAt(0, 0, 0);
     this.scene.add(this.camera);
   }
 

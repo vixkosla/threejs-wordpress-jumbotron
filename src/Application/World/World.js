@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import MyModel from "./MyModel.js";
+import BacklightHexagon from "./BacklightHexagon.js";
 
 export default class World {
   constructor(scene) {
@@ -9,6 +10,7 @@ export default class World {
     this.setupLights();
     this.setupHelpers();
     this.setupObjects();
+    this.setupBacklight();
   }
 
   setupLights() {
@@ -35,6 +37,12 @@ export default class World {
     // Создаем наш объект (модель)
     this.myModel = new MyModel(this.scene);
     this.items.push(this.myModel);
+  }
+
+  setupBacklight() {
+    // Шестиугольник-подсветка сзади для transmission-эффекта
+    this.backlightHexagon = new BacklightHexagon(this.scene, true);
+    this.items.push(this.backlightHexagon);
   }
 
   // Метод для вызова действия у модели извне

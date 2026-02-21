@@ -41,14 +41,34 @@ npm install lil-gui
 - Каждый G-блок получает случайный цвет из палитры через `cloneWithColor()`
 - `GMaterial` инициализируется с `scene` для работы GUI
 
+### 4. Создан `src/Application/World/BacklightHexagon.js`
+- Шестиугольник-подсветка сзади сцены
+- `RectAreaLight` для интенсивного направленного света
+- Белый `MeshBasicMaterial` для визуализации источника
+- GUI для настройки:
+  - Intensity (0-50)
+  - Opacity шестиугольника
+  - Видимость helper'а
+- Позиция: (-15, 0, 15), смотрит на (0, 0, 0)
+- Повёрнут вершиной вверх (30° поворот)
+
+### 5. Обновлён `src/Application/World/World.js`
+- Добавлен `setupBacklight()` для инициализации подсветки
+
+### 6. Обновлён `src/Application/Application.js`
+- Камера перемещена на (0, 0, 25)
+- `camera.lookAt(0, 0, 0)` — точный фокус на центр сцены
+- FOV изменён с 10 на 35 для лучшего обзора
+
 ## Структура проекта
 ```
 src/Application/World/
 ├── Materials/
 │   ├── GMaterial.js      ← обновлён
 │   └── TMaterial.js      ← текущий (MeshStandardMaterial)
+├── BacklightHexagon.js   ← новый
 ├── MyModel.js            ← обновлён
-└── World.js
+└── World.js              ← обновлён
 ```
 
 ## Следующие шаги
@@ -63,8 +83,14 @@ npm run dev
 ```
 
 ## Параметры для подбора (через GUI в браузере)
-Открыть панель "G Material" справа сверху и подбирать:
+
+### G Material (справа сверху)
 - Transmission (0.8-1.0)
 - Roughness (0.1-0.5 для матовости)
 - Thickness (0.5-2.0)
 - IOR (1.3-1.8)
+
+### Backlight Hexagon (справа сверху)
+- Intensity (10-30 для яркого света)
+- Hexagon Opacity (0.5-1.0)
+- Light Visible (вкл/выкл helper)
