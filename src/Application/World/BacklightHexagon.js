@@ -5,24 +5,28 @@ import GUI from "lil-gui";
  * Шестиугольник-подсветка сзади сцены
  * Работает как источник света для transmission-материалов
  * Использует RectAreaLight + белый MeshBasicMaterial (визуальный шестиугольник)
+ *
+ * Позиция: зеркально камере относительно (0,0,0)
+ * Размер: рассчитывается от bounding box композиции
  */
 export default class BacklightHexagon {
-  constructor(scene) {
+  constructor(scene, boundingBox) {
     this.scene = scene;
     this.gui = null;
 
     // Параметры света
     this.params = {
-      intensity: 15,           // сила света RectAreaLight
+      intensity: 3,            // сила света RectAreaLight (уменьшено)
       hexagonOpacity: 1.0,     // непрозрачность шестиугольника
       hexagonVisible: true,    // показывать ли шестиугольник
     };
 
-    // Позиция: напротив камеры, за сценой
-    // Камера на (0, 0, 25) смотрит на (0,0,0)
-    // Шестиугольник ставим сзади на (0, 0, -20)
-    this.position = new THREE.Vector3(0, 0, -20);
+    // Позиция: зеркально камере (камера на (0, 0, 25) → шестиугольник на (0, 0, -25))
+    this.position = new THREE.Vector3(0, 0, -25);
     this.lookAtTarget = new THREE.Vector3(0, 0, 0);
+
+    // Рассчитываем размер шестиугольника от bounding box
+    this.hexagonSize = this.calculateHexagonSize(boundingBox);
 
     // Группа для шестиугольника и света
     this.group = new THREE.Group();
@@ -35,10 +39,6 @@ export default class BacklightHexagon {
     this.rectLight = this.createRectAreaLight();
     this.group.add(this.rectLight);
 
-    // Helper для визуализации RectAreaLight (отладка)
-    // Создаётся через addRectAreaLightHelper из examples
-    this.lightHelper = null;
-
     this.group.position.copy(this.position);
     this.group.lookAt(this.lookAtTarget);
 
@@ -46,11 +46,40 @@ export default class BacklightHexagon {
     this.setupGUI();
   }
 
+  /**
+   * Рассчитать размер шестиугольника от bounding box композиции
+   * Размер = половина bounding box + запас на перспективу
+   */
+  calculateHexagonSize(boundingBox) {
+    if (!boundingBox) {
+      return { width: 4, height: 4, radius: 2 }; // дефолтный размер
+    }
+
+    const size = new THREE.Vector3();
+    boundingBox.getSize(size);
+
+    // Берём максимальный размер по X и Y
+    const maxSize = Math.max(size.x, size.y);
+
+    // Шестиугольник в 2 раза меньше bounding box
+    const hexRadius = (maxSize / 2) * 0.5;
+
+    return {
+      width: hexRadius * 2,
+      height: hexRadius * 2,
+      radius: hexRadius
+    };
+  }
+
   createHexagon() {
     // Шестиугольник через CylinderGeometry с 6 сегментами
-    const radius = 8;
-    const geometry = new THREE.CylinderGeometry(radius, radius, 0.1, 6);
-    
+    const geometry = new THREE.CylinderGeometry(
+      this.hexagonSize.radius,
+      this.hexagonSize.radius,
+      0.1,
+      6
+    );
+
     // Поворачиваем чтобы стоял на углу (вершиной вверх)
     // CylinderGeometry по умолчанию лежит на боку, нужно повернуть
     geometry.rotateX(Math.PI / 2); // кладём на XY плоскость
@@ -68,11 +97,14 @@ export default class BacklightHexagon {
   }
 
   createRectAreaLight() {
-    const width = 14;
-    const height = 14;
     const intensity = this.params.intensity;
 
-    const light = new THREE.RectAreaLight(0xffffff, intensity, width, height);
+    const light = new THREE.RectAreaLight(
+      0xffffff,
+      intensity,
+      this.hexagonSize.width,
+      this.hexagonSize.height
+    );
     // Свет уже внутри группы, которая смотрит на (0,0,0)
     // Просто ставим его чуть впереди шестиугольника (в сторону сцены)
     light.position.set(0, 0, 0.5);
@@ -97,7 +129,7 @@ export default class BacklightHexagon {
     this.gui = new GUI({ title: "Backlight Hexagon" });
 
     const folderLight = this.gui.addFolder("Свет");
-    folderLight.add(this.params, "intensity", 0, 50, 0.5)
+    folderLight.add(this.params, "intensity", 0, 10, 0.1)
       .name("Intensity")
       .onChange(() => this.updateFromParams());
 
@@ -116,7 +148,7 @@ export default class BacklightHexagon {
 
   resetParams() {
     this.params = {
-      intensity: 15,
+      intensity: 3,
       hexagonOpacity: 1.0,
       hexagonVisible: true,
     };

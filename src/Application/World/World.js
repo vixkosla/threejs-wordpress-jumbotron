@@ -40,8 +40,11 @@ export default class World {
   }
 
   setupBacklight() {
+    // Получаем bounding box композиции для расчёта размера шестиугольника
+    const boundingBox = this.myModel.getBoundingBox();
+    
     // Шестиугольник-подсветка сзади для transmission-эффекта
-    this.backlightHexagon = new BacklightHexagon(this.scene);
+    this.backlightHexagon = new BacklightHexagon(this.scene, boundingBox);
     this.items.push(this.backlightHexagon);
   }
 

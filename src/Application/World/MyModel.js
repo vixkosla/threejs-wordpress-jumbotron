@@ -191,4 +191,33 @@ export default class MyModel {
       // this.mesh.scale.set(1.5, 1.5, 1.5); // Пример реакции
     }
   }
+
+  /**
+   * Получить bounding box всей композиции
+   * @returns {THREE.Box3|null}
+   */
+  getBoundingBox() {
+    const box = new THREE.Box3();
+    let hasObjects = false;
+
+    // Собираем bounding box со всех мешей
+    for (const mesh of this.meshes) {
+      if (mesh.geometry) {
+        const meshBox = new THREE.Box3().setFromObject(mesh);
+        box.union(meshBox);
+        hasObjects = true;
+      }
+    }
+
+    // Добавляем T-меш из сцены
+    this.scene.traverse((child) => {
+      if (child.isMesh && child.geometry && child.material.color?.equals(new THREE.Color(0x00ff00))) {
+        const meshBox = new THREE.Box3().setFromObject(child);
+        box.union(meshBox);
+        hasObjects = true;
+      }
+    });
+
+    return hasObjects ? box : null;
+  }
 }
