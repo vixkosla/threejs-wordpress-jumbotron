@@ -41,7 +41,7 @@ export default class World {
 
   setupBacklight() {
     // Шестиугольник-подсветка сзади для transmission-эффекта
-    this.backlightHexagon = new BacklightHexagon(this.scene, true);
+    this.backlightHexagon = new BacklightHexagon(this.scene);
     this.items.push(this.backlightHexagon);
   }
 

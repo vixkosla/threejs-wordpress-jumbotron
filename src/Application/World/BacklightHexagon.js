@@ -7,9 +7,8 @@ import GUI from "lil-gui";
  * Использует RectAreaLight + белый MeshBasicMaterial (визуальный шестиугольник)
  */
 export default class BacklightHexagon {
-  constructor(scene, debug = true) {
+  constructor(scene) {
     this.scene = scene;
-    this.debug = debug;
     this.gui = null;
 
     // Параметры света
@@ -17,7 +16,6 @@ export default class BacklightHexagon {
       intensity: 15,           // сила света RectAreaLight
       hexagonOpacity: 1.0,     // непрозрачность шестиугольника
       hexagonVisible: true,    // показывать ли шестиугольник
-      lightVisible: true,      // показывать ли helper света (отладка)
     };
 
     // Позиция: напротив камеры, за сценой
@@ -37,18 +35,15 @@ export default class BacklightHexagon {
     this.rectLight = this.createRectAreaLight();
     this.group.add(this.rectLight);
 
-    // Helper для визуализации света (отладка)
-    this.lightHelper = new THREE.RectAreaLightHelper(this.rectLight);
-    this.group.add(this.lightHelper);
+    // Helper для визуализации RectAreaLight (отладка)
+    // Создаётся через addRectAreaLightHelper из examples
+    this.lightHelper = null;
 
     this.group.position.copy(this.position);
     this.group.lookAt(this.lookAtTarget);
 
     this.scene.add(this.group);
-
-    if (this.debug) {
-      this.setupGUI();
-    }
+    this.setupGUI();
   }
 
   createHexagon() {
@@ -93,7 +88,6 @@ export default class BacklightHexagon {
     this.rectLight.intensity = this.params.intensity;
     this.hexagonMesh.material.opacity = this.params.hexagonOpacity;
     this.hexagonMesh.visible = this.params.hexagonVisible;
-    this.lightHelper.visible = this.params.lightVisible;
   }
 
   /**
@@ -105,9 +99,6 @@ export default class BacklightHexagon {
     const folderLight = this.gui.addFolder("Свет");
     folderLight.add(this.params, "intensity", 0, 50, 0.5)
       .name("Intensity")
-      .onChange(() => this.updateFromParams());
-    folderLight.add(this.params, "lightVisible")
-      .name("Helper (отладка)")
       .onChange(() => this.updateFromParams());
 
     const folderHex = this.gui.addFolder("Шестиугольник");
@@ -128,7 +119,6 @@ export default class BacklightHexagon {
       intensity: 15,
       hexagonOpacity: 1.0,
       hexagonVisible: true,
-      lightVisible: true,
     };
     this.updateFromParams();
     if (this.gui) {
