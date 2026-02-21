@@ -21,8 +21,9 @@ export default class BacklightHexagon {
       hexagonVisible: true,    // показывать ли шестиугольник
     };
 
-    // Позиция: зеркально камере (камера на (0, 0, 25) → шестиугольник на (0, 0, -25))
-    this.position = new THREE.Vector3(0, 0, -25);
+    // Позиция: зеркально камере относительно (0,0,0)
+    // Камера на (20, 20, 20) → шестиугольник на (-20, -20, -20)
+    this.position = new THREE.Vector3(-20, -20, -20);
     this.lookAtTarget = new THREE.Vector3(0, 0, 0);
 
     // Рассчитываем размер шестиугольника от bounding box

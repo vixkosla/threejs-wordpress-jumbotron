@@ -40,8 +40,8 @@ export default class Application {
       0.1,
       100,
     );
-    // Позиция камеры: смотрим на сцену под углом
-    this.camera.position.set(0, 0, 25);
+    // Позиция камеры: как при FOV 10-15 (изометрический вид)
+    this.camera.position.set(20, 20, 20);
     this.camera.lookAt(0, 0, 0);
     this.scene.add(this.camera);
   }
