@@ -8,6 +8,10 @@ export default class World {
     this.scene = scene;
     this.items = []; // Храним список наших объектов
 
+    // Helpers visibility (для GUI)
+    this.showAxes = true;
+    this.showGrid = true;
+
     this.setupLights();
     this.setupHelpers();
     this.setupObjects();
@@ -38,13 +42,14 @@ export default class World {
   }
 
   setupHelpers() {
-    // Добавляем вспомогательные объекты (например, оси координат)
-    const axesHelper = new THREE.AxesHelper(10);
-    this.scene.add(axesHelper);
+    // Вспомогательные объекты для отладки
+    // Оси координат
+    this.axesHelper = new THREE.AxesHelper(10);
+    this.scene.add(this.axesHelper);
 
-    // Добавляем сетку
-    const gridHelper = new THREE.GridHelper(10, 10);
-    this.scene.add(gridHelper);
+    // Сетка на полу
+    this.gridHelper = new THREE.GridHelper(10, 10);
+    this.scene.add(this.gridHelper);
   }
 
   setupObjects() {
@@ -102,6 +107,19 @@ export default class World {
       .name("Position Z")
       .onChange((value) => {
         this.directionalLight.position.z = value;
+      });
+
+    // Helpers toggle
+    const folderHelpers = gui.addFolder("Helpers (отладка)");
+    folderHelpers.add(this, 'showAxes', true)
+      .name("Axes Helper")
+      .onChange((value) => {
+        this.axesHelper.visible = value;
+      });
+    folderHelpers.add(this, 'showGrid', true)
+      .name("Grid Helper")
+      .onChange((value) => {
+        this.gridHelper.visible = value;
       });
   }
 
