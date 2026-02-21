@@ -104,9 +104,9 @@ export default class MyModel {
     ];
     
     // Параметры физики
-    this.forceMultiplier = 15;  // Множитель силы
-    this.damping = 0.95;         // Затухание скорости
-    this.maxForce = 50;          // Максимальная сила
+    this.forceMultiplier = 50;  // Множитель силы (для заметности)
+    this.damping = 0.90;         // Затухание скорости (плавное возвращение)
+    this.maxForce = 200;         // Максимальная сила
 
     this.composeCube();
     this.translateBlocks();
@@ -118,8 +118,13 @@ export default class MyModel {
    */
   setupPhysics() {
     this.meshes.forEach((mesh, index) => {
-      // Создаём физическое тело
-      const shape = new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5));
+      // Вычисляем размер блока из bounding box
+      const bbox = new THREE.Box3().setFromObject(mesh);
+      const size = new THREE.Vector3();
+      bbox.getSize(size);
+      
+      // Создаём физическое тело (размер соответствует мешу)
+      const shape = new CANNON.Box(new CANNON.Vec3(size.x / 2, size.y / 2, size.z / 2));
       const body = new CANNON.Body({
         mass: 1, // Динамическое тело
         position: new CANNON.Vec3(
@@ -128,13 +133,13 @@ export default class MyModel {
           mesh.position.z
         ),
         linearDamping: this.damping,
-        angularDamping: 0.99,
+        angularDamping: 0.99, // Блокируем вращение
       });
-      
+
       body.addShape(shape);
       this.world.addBody(body);
       this.physicsBodies.push(body);
-      
+
       // Сохраняем оригинальную позицию
       mesh.userData.originalPosition = mesh.position.clone();
       mesh.userData.physicsIndex = index;
@@ -154,6 +159,9 @@ export default class MyModel {
     // Вычисляем скорость мыши
     this.mouseVelocity.x = this.mouse.x - this.prevMouse.x;
     this.mouseVelocity.y = this.mouse.y - this.prevMouse.y;
+    
+    // Плавное затухание скорости мыши (для плавности)
+    this.mouseVelocity.multiplyScalar(0.9);
   }
 
   composeCube() {
@@ -282,46 +290,40 @@ export default class MyModel {
   }
 
   // Вызывается каждый кадр
-  update(time, deltaTime = 0.016) {
-    // Обновляем физический мир
-    this.world.step(1 / 60, deltaTime, 3);
+  update(time, deltaTime = 1 / 60) {
+    // Обновляем физический мир с правильным deltaTime
+    this.world.step(deltaTime);
 
     // Применяем силу от мыши к каждому блоку
     this.physicsBodies.forEach((body, index) => {
       const pushVector = this.pushVectors[index];
       if (pushVector && pushVector.length() > 0) {
         // Скалярное произведение скорости мыши на вектор направления
-        const velocityDotVector = 
-          this.mouseVelocity.x * pushVector.x + 
+        const velocityDotVector =
+          this.mouseVelocity.x * pushVector.x +
           this.mouseVelocity.y * pushVector.y;
+
+        // Применяем силу (плавная передача движения)
+        const force = velocityDotVector * this.forceMultiplier;
         
-        // Если есть движение в направлении вектора — применяем силу
-        if (Math.abs(velocityDotVector) > 0.0001) {
-          const force = Math.min(
-            velocityDotVector * this.forceMultiplier,
-            this.maxForce
-          );
-          
-          // Применяем силу в направлении вектора
-          body.applyForce(
-            new CANNON.Vec3(
-              pushVector.x * force,
-              pushVector.y * force,
-              pushVector.z * force
-            ),
-            body.position
-          );
-        }
+        // Ограничиваем максимальную силу
+        const clampedForce = Math.max(-this.maxForce, Math.min(force, this.maxForce));
+
+        // Применяем силу в направлении вектора
+        body.applyForce(
+          new CANNON.Vec3(
+            pushVector.x * clampedForce,
+            pushVector.y * clampedForce,
+            pushVector.z * clampedForce
+          ),
+          body.position
+        );
       }
-      
+
       // Синхронизируем позицию меша с физическим телом
       const mesh = this.meshes.find(m => m.userData.physicsIndex === index);
-      if (mesh && mesh.userData.originalPosition) {
-        mesh.position.set(
-          body.position.x,
-          body.position.y,
-          body.position.z
-        );
+      if (mesh) {
+        mesh.position.copy(body.position);
       }
     });
 

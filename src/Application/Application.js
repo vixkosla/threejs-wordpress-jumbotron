@@ -102,9 +102,10 @@ export default class Application {
 
   tick() {
     const elapsedTime = this.clock.getElapsedTime();
+    const deltaTime = this.clock.getDelta();
 
     // Обновляем мир (анимации объектов)
-    this.world.update(elapsedTime);
+    this.world.update(elapsedTime, deltaTime);
 
     // Обновляем контролы
     this.controls.update();

@@ -208,10 +208,10 @@ export default class World {
     }
   }
 
-  update(time) {
+  update(time, deltaTime) {
     // Обновляем все объекты в мире
     this.items.forEach((item) => {
-      if (item.update) item.update(time);
+      if (item.update) item.update(time, deltaTime);
     });
   }
 }
