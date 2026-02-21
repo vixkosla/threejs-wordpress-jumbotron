@@ -1,50 +1,50 @@
 import * as THREE from "three";
-import GMaterial, { G_COLORS } from "./Materials/GMaterial.js";
-import TMaterial from "./Materials/TMaterial.js";
+import GMaterial from "./Materials/GMaterial.js";
 
-// Цвета для блоков
-const COLOR_BLUE = 0x3b82f6;    // синий
-const COLOR_WHITE = 0xffffff;   // белый
-const COLOR_LIME = 0xa3e635;    // салатовый
+// Цвета для блоков (мягкие, полупрозрачные оттенки)
+const COLOR_PURPLE = 0xc084fc;  // лёгкий фиолетовый (пастельный)
+const COLOR_LIME = 0xbef264;    // мягкий салатовый (цвет свежего яблока)
+const COLOR_GLASS = 0xf8f9fa;   // стеклянный белый (полупрозрачный пластик)
 
 // Нумерация блоков слева направо, сверху вниз:
-// 1. [-2.0, 1, 0.5] - левый нижний угол - синий
-// 2. [-0.5, 2, 2] - центральный верхний - белый
-// 3. [0, 0.5, 2] - центральный нижний - белый
-// 4. [-2, 2.5, 1] - левая грань верхний - синий
-// 5. [-2, 2.5, 2.5] - правый верхний - белый
-// 6. [-3, 1, 1] - левый дальний - белый
+// 1. [-2.0, 1, 0.5] - левый нижний угол - фиолетовый
+// 2. [-0.5, 2, 2] - центральный верхний - салатовый
+// 3. [0, 0.5, 2] - центральный нижний - стеклянный белый
+// 4. [-2, 2.5, 1] - левая грань верхний - фиолетовый
+// 5. [-2, 2.5, 2.5] - правый верхний - стеклянный белый
+// 6. [-3, 1, 1] - левый дальний - стеклянный белый
+// T-блок: [-0.5, 1.5, 1.0] - центральный (основной) - белый
 
 const ginformation = [
   {
     position: [-2.0, 1, 0.5],
     rotation: [0, Math.PI, 0],
-    color: COLOR_BLUE,  // 1. левый нижний - синий
+    color: COLOR_PURPLE,  // 1. левый нижний - лёгкий фиолетовый
   },
   {
     position: [-0.5, 2, 2],
     rotation: [-Math.PI / 2, Math.PI / 2, 0],
-    color: COLOR_WHITE,  // 2. центральный верхний - белый
+    color: COLOR_LIME,  // 2. центральный верхний - мягкий салатовый
   },
   {
     position: [0, 0.5, 2],
     rotation: [-Math.PI / 2, Math.PI, 0],
-    color: COLOR_WHITE,  // 3. центральный нижний - белый
+    color: COLOR_GLASS,  // 3. центральный нижний - стеклянный белый
   },
   {
     position: [-2, 2.5, 1],
     rotation: [-Math.PI / 2, 2 * Math.PI, -Math.PI / 2],
-    color: COLOR_BLUE,  // 4. левая грань - синий
+    color: COLOR_PURPLE,  // 4. левая грань - лёгкий фиолетовый
   },
   {
     position: [-2, 2.5, 2.5],
     rotation: [Math.PI / 2, 0, Math.PI],
-    color: COLOR_WHITE,  // 5. правый верхний - белый
+    color: COLOR_GLASS,  // 5. правый верхний - стеклянный белый
   },
   {
     position: [-3, 1, 1],
     rotation: [-Math.PI / 2, Math.PI / 2, -2 * Math.PI],
-    color: COLOR_WHITE,  // 6. левый дальний - белый
+    color: COLOR_GLASS,  // 6. левый дальний - стеклянный белый
   },
 ];
 
@@ -52,6 +52,7 @@ const tinformation = [
   {
     position: [-0.5, 1.5, 1.0],
     rotation: [0, -Math.PI / 2, Math.PI / 2],
+    color: COLOR_GLASS,  // T-блок - стеклянный белый (центральный)
   },
 ];
 
@@ -64,7 +65,6 @@ export default class MyModel {
     this.group = new THREE.Object3D();
     // Передаём scene для работы GUI
     this.gMaterial = new GMaterial(scene);
-    this.tMaterial = new TMaterial();
 
     this.composeCube();
     this.translateBlocks();
@@ -82,7 +82,7 @@ export default class MyModel {
     });
 
     tinformation.forEach((info) => {
-      const t = this.initTMesh();
+      const t = this.initTMesh(info.color);
       t.position.set(...info.position);
       t.rotation.set(...info.rotation);
       t.scale.set(0.85, 0.85, 0.85);
@@ -142,7 +142,7 @@ export default class MyModel {
     return letterG;
   }
 
-  initTMesh() {
+  initTMesh(color = COLOR_GLASS) {
     // 1. Создаём 2D-форму буквы Т
     const shape = new THREE.Shape();
 
@@ -179,10 +179,12 @@ export default class MyModel {
     // 4. Центрируем геометрию (опционально)
     geometry.center();
 
-    // 5. Создаём меш
-    const material = this.tMaterial.get();
+    // 5. Создаём меш с transmission материалом
+    const baseMaterial = this.gMaterial.get();
+    const material = baseMaterial.clone();
+    material.color.set(color);
+    
     const letterT = new THREE.Mesh(geometry, material);
-
     letterT.castShadow = true;
 
     return letterT;
