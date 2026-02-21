@@ -2,30 +2,49 @@ import * as THREE from "three";
 import GMaterial, { G_COLORS } from "./Materials/GMaterial.js";
 import TMaterial from "./Materials/TMaterial.js";
 
+// Цвета для блоков
+const COLOR_BLUE = 0x3b82f6;    // синий
+const COLOR_WHITE = 0xffffff;   // белый
+const COLOR_LIME = 0xa3e635;    // салатовый
+
+// Нумерация блоков слева направо, сверху вниз:
+// 1. [-2.0, 1, 0.5] - левый нижний угол - синий
+// 2. [-0.5, 2, 2] - центральный верхний - белый
+// 3. [0, 0.5, 2] - центральный нижний - белый
+// 4. [-2, 2.5, 1] - левая грань верхний - синий
+// 5. [-2, 2.5, 2.5] - правый верхний - белый
+// 6. [-3, 1, 1] - левый дальний - белый
+
 const ginformation = [
   {
     position: [-2.0, 1, 0.5],
     rotation: [0, Math.PI, 0],
+    color: COLOR_BLUE,  // 1. левый нижний - синий
   },
   {
     position: [-0.5, 2, 2],
     rotation: [-Math.PI / 2, Math.PI / 2, 0],
+    color: COLOR_WHITE,  // 2. центральный верхний - белый
   },
   {
     position: [0, 0.5, 2],
     rotation: [-Math.PI / 2, Math.PI, 0],
+    color: COLOR_WHITE,  // 3. центральный нижний - белый
   },
   {
     position: [-2, 2.5, 1],
     rotation: [-Math.PI / 2, 2 * Math.PI, -Math.PI / 2],
+    color: COLOR_BLUE,  // 4. левая грань - синий
   },
   {
     position: [-2, 2.5, 2.5],
     rotation: [Math.PI / 2, 0, Math.PI],
+    color: COLOR_WHITE,  // 5. правый верхний - белый
   },
   {
     position: [-3, 1, 1],
     rotation: [-Math.PI / 2, Math.PI / 2, -2 * Math.PI],
+    color: COLOR_WHITE,  // 6. левый дальний - белый
   },
 ];
 
@@ -53,7 +72,7 @@ export default class MyModel {
 
   composeCube() {
     ginformation.forEach((info, index) => {
-      const g = this.initGMesh();
+      const g = this.initGMesh(info.color);
       g.position.set(...info.position);
       g.rotation.set(...info.rotation);
       g.scale.set(0.8, 0.8, 0.8);
@@ -83,7 +102,7 @@ export default class MyModel {
     });
   }
 
-  initGMesh() {
+  initGMesh(color = COLOR_WHITE) {
     const shape = new THREE.Shape();
 
     // Параметры
@@ -112,10 +131,10 @@ export default class MyModel {
     const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
     geometry.center();
 
-    // Клонируем материал и задаём случайный цвет из палитры
+    // Клонируем материал и задаём цвет
     const baseMaterial = this.gMaterial.get();
     const material = baseMaterial.clone();
-    material.color.set(this.gMaterial.getRandomColor());
+    material.color.set(color);
 
     const letterG = new THREE.Mesh(geometry, material);
     letterG.scale.set(1.0, 1.0, 1.0);

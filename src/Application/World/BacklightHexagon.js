@@ -16,11 +16,11 @@ export default class BacklightHexagon {
 
     // Параметры света
     this.params = {
-      intensity: 5,              // сила света RectAreaLight
+      intensity: 15,             // сила света RectAreaLight (усилено)
       hexagonOpacity: 1.0,       // непрозрачность шестиугольника
       hexagonVisible: true,      // показывать ли шестиугольник
       addLightBehind: true,      // дополнительный свет сзади для transmission
-      addLightIntensity: 10,     // интенсивность заднего света
+      addLightIntensity: 30,     // интенсивность заднего света (усилено)
     };
 
     // Позиция: зеркально камере относительно (0,0,0)
@@ -147,14 +147,14 @@ export default class BacklightHexagon {
     this.gui = new GUI({ title: "Backlight Hexagon" });
 
     const folderLight = this.gui.addFolder("Backlight");
-    folderLight.add(this.params, "intensity", 0, 10, 0.1)
+    folderLight.add(this.params, "intensity", 0, 30, 0.5)
       .name("RectArea Intensity")
       .onChange(() => this.updateFromParams());
 
     folderLight.add(this.params, "addLightBehind")
       .name("Add Back Light")
       .onChange(() => this.updateFromParams());
-    folderLight.add(this.params, "addLightIntensity", 0, 20, 0.5)
+    folderLight.add(this.params, "addLightIntensity", 0, 50, 1)
       .name("Back Light Intensity")
       .onChange(() => this.updateFromParams());
 
@@ -173,11 +173,11 @@ export default class BacklightHexagon {
 
   resetParams() {
     this.params = {
-      intensity: 5,
+      intensity: 15,
       hexagonOpacity: 1.0,
       hexagonVisible: true,
       addLightBehind: true,
-      addLightIntensity: 10,
+      addLightIntensity: 30,
     };
     this.updateFromParams();
     if (this.gui) {
