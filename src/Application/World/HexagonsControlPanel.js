@@ -29,7 +29,9 @@ export default class HexagonsControlPanel {
     if (!defaults.hexagon3.radius) this.updateParamsFromPosition(this.params3, position3);
 
     this.setupGUI();
-    this.updatePositions();
+    
+    // Загружаем настройки (localStorage или дефолтные)
+    this.loadSettings();
   }
 
   /**
@@ -140,12 +142,15 @@ export default class HexagonsControlPanel {
    * Загрузить настройки
    */
   loadSettings() {
+    // Сначала пробуем из localStorage
     const settings = this.settingsManager.load();
     if (settings) {
       this.applySettings(settings);
-      console.log('✅ Настройки загружены');
+      console.log('✅ Настройки загружены из localStorage');
     } else {
-      console.log('⚠️ Нет сохранённых настроек');
+      // Если нет сохранения, используем дефолтные из конфига
+      this.applySettings(DEFAULT_LIGHT_SETTINGS);
+      console.log('✅ Применены настройки по умолчанию из конфига');
     }
   }
 
