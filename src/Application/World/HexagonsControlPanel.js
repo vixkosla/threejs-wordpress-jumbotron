@@ -1,43 +1,36 @@
 import * as THREE from "three";
 import GUI from "lil-gui";
+import SettingsManager from "./SettingsManager.js";
 
 /**
- * Единая панель управления обоими шестиугольниками
- * Группировка: Орбиты | Свет | Быстрые позиции
+ * Единая панель управления тремя шестиугольниками
+ * Группировка: Орбиты | Свет | Сохранение
  */
 export default class HexagonsControlPanel {
-  constructor(hexagonFront, hexagonLeft, positionFront, positionLeft) {
-    this.hexagonFront = hexagonFront;
-    this.hexagonLeft = hexagonLeft;
+  constructor(hexagon1, hexagon2, hexagon3, position1, position2, position3) {
+    this.hexagon1 = hexagon1;
+    this.hexagon2 = hexagon2;
+    this.hexagon3 = hexagon3;
     this.gui = null;
+    this.settingsManager = new SettingsManager();
 
-    // Параметры для Front шестиугольника
-    this.frontParams = {
-      radius: 4,
-      azimuth: 0,
-      elevation: 0,
-      lightIntensity: 7.5,
-      backLightIntensity: 15,
-    };
-
-    // Параметры для Left шестиугольника
-    this.leftParams = {
-      radius: 12,
-      azimuth: 0,
-      elevation: 0,
-      lightIntensity: 7.5,
-      backLightIntensity: 15,
-    };
+    // Параметры для каждого шестиугольника
+    this.params1 = { radius: 4, azimuth: 0, elevation: 0, lightIntensity: 7.5, backLightIntensity: 15 };
+    this.params2 = { radius: 12, azimuth: 0, elevation: 0, lightIntensity: 7.5, backLightIntensity: 15 };
+    this.params3 = { radius: 12, azimuth: 0, elevation: 0, lightIntensity: 7.5, backLightIntensity: 15 };
 
     // Вычисляем начальные углы из позиций
-    this.updateParamsFromPosition(this.frontParams, positionFront);
-    this.updateParamsFromPosition(this.leftParams, positionLeft);
+    this.updateParamsFromPosition(this.params1, position1);
+    this.updateParamsFromPosition(this.params2, position2);
+    this.updateParamsFromPosition(this.params3, position3);
 
     // Синхронизируем интенсивность
-    this.frontParams.lightIntensity = this.hexagonFront.params.intensity / 2;
-    this.frontParams.backLightIntensity = this.hexagonFront.params.addLightIntensity;
-    this.leftParams.lightIntensity = this.hexagonLeft.params.intensity / 2;
-    this.leftParams.backLightIntensity = this.hexagonLeft.params.addLightIntensity;
+    this.params1.lightIntensity = this.hexagon1.params.intensity / 2;
+    this.params1.backLightIntensity = this.hexagon1.params.addLightIntensity;
+    this.params2.lightIntensity = this.hexagon2.params.intensity / 2;
+    this.params2.backLightIntensity = this.hexagon2.params.addLightIntensity;
+    this.params3.lightIntensity = this.hexagon3.params.intensity / 2;
+    this.params3.backLightIntensity = this.hexagon3.params.addLightIntensity;
 
     this.setupGUI();
     this.updatePositions();
@@ -54,11 +47,12 @@ export default class HexagonsControlPanel {
   }
 
   /**
-   * Обновить позиции обоих шестиугольников
+   * Обновить позиции всех шестиугольников
    */
   updatePositions() {
-    this.updatePosition(this.hexagonFront, this.frontParams);
-    this.updatePosition(this.hexagonLeft, this.leftParams);
+    this.updatePosition(this.hexagon1, this.params1);
+    this.updatePosition(this.hexagon2, this.params2);
+    this.updatePosition(this.hexagon3, this.params3);
   }
 
   /**
@@ -75,25 +69,94 @@ export default class HexagonsControlPanel {
     hexagon.position.set(x, y, z);
     hexagon.group.position.set(x, y, z);
     hexagon.group.lookAt(0, 0, 0);
+    hexagon.updateMarkerPosition(hexagon.position);
   }
 
   /**
    * Обновить интенсивность света
    */
   updateLight() {
-    this.hexagonFront.params.intensity = this.frontParams.lightIntensity * 2;
-    this.hexagonFront.params.addLightIntensity = this.frontParams.backLightIntensity;
-    this.hexagonFront.updateFromParams();
+    this.hexagon1.params.intensity = this.params1.lightIntensity * 2;
+    this.hexagon1.params.addLightIntensity = this.params1.backLightIntensity;
+    this.hexagon1.updateFromParams();
 
-    this.hexagonLeft.params.intensity = this.leftParams.lightIntensity * 2;
-    this.hexagonLeft.params.addLightIntensity = this.leftParams.backLightIntensity;
-    this.hexagonLeft.updateFromParams();
+    this.hexagon2.params.intensity = this.params2.lightIntensity * 2;
+    this.hexagon2.params.addLightIntensity = this.params2.backLightIntensity;
+    this.hexagon2.updateFromParams();
+
+    this.hexagon3.params.intensity = this.params3.lightIntensity * 2;
+    this.hexagon3.params.addLightIntensity = this.params3.backLightIntensity;
+    this.hexagon3.updateFromParams();
+  }
+
+  /**
+   * Получить все текущие настройки
+   */
+  getSettings() {
+    return {
+      hexagon1: { ...this.params1 },
+      hexagon2: { ...this.params2 },
+      hexagon3: { ...this.params3 },
+    };
+  }
+
+  /**
+   * Применить настройки
+   */
+  applySettings(settings) {
+    if (settings.hexagon1) {
+      Object.assign(this.params1, settings.hexagon1);
+    }
+    if (settings.hexagon2) {
+      Object.assign(this.params2, settings.hexagon2);
+    }
+    if (settings.hexagon3) {
+      Object.assign(this.params3, settings.hexagon3);
+    }
+    this.updatePositions();
+    this.updateLight();
+    this.updateGUI();
+  }
+
+  /**
+   * Сохранить настройки и экспортировать
+   */
+  saveAndExport() {
+    const settings = this.getSettings();
+    const json = this.settingsManager.save(settings);
+    const jsExport = this.settingsManager.exportToJS(settings);
+    
+    // Создаём blob для скачивания
+    const blob = new Blob([jsExport], { type: 'text/javascript' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'hexagon-settings.js';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    console.log('📦 Настройки экспортированы в hexagon-settings.js');
+  }
+
+  /**
+   * Загрузить настройки
+   */
+  loadSettings() {
+    const settings = this.settingsManager.load();
+    if (settings) {
+      this.applySettings(settings);
+      console.log('✅ Настройки загружены');
+    } else {
+      console.log('⚠️ Нет сохранённых настроек');
+    }
   }
 
   setupGUI() {
     this.gui = new GUI({ 
       title: "🔷 Hexagons Control",
-      width: 300,
+      width: 320,
       container: document.querySelector('body')
     });
     
@@ -105,75 +168,87 @@ export default class HexagonsControlPanel {
       this.gui.domElement.style.right = 'auto';
     }
 
-    // === ПАПКА 1: ОРБИТЫ (одновременно оба) ===
-    const folderOrbits = this.gui.addFolder("🌍 Орбиты (оба шестиугольника)");
+    // === ПАПКА 1: ОРБИТЫ (все три) ===
+    const folderOrbits = this.gui.addFolder("🌍 Орбиты (3 шестиугольника)");
 
-    // Front шестиугольник
-    const folderFrontOrbit = folderOrbits.addFolder("Front (ближний)");
-    folderFrontOrbit.add(this.frontParams, "radius", 1, 15, 0.5)
-      .name("Радиус")
-      .onChange(() => this.updatePosition(this.hexagonFront, this.frontParams));
-    folderFrontOrbit.add(this.frontParams, "azimuth", -180, 180, 0.5)
-      .name("Azimuth °")
-      .onChange(() => this.updatePosition(this.hexagonFront, this.frontParams));
-    folderFrontOrbit.add(this.frontParams, "elevation", -90, 90, 0.5)
-      .name("Elevation °")
-      .onChange(() => this.updatePosition(this.hexagonFront, this.frontParams));
+    const folder1 = folderOrbits.addFolder("1. Front (ближний)");
+    folder1.add(this.params1, "radius", 1, 15, 0.5).name("Радиус").onChange(() => this.updatePosition(this.hexagon1, this.params1));
+    folder1.add(this.params1, "azimuth", -180, 180, 0.5).name("Azimuth °").onChange(() => this.updatePosition(this.hexagon1, this.params1));
+    folder1.add(this.params1, "elevation", -90, 90, 0.5).name("Elevation °").onChange(() => this.updatePosition(this.hexagon1, this.params1));
 
-    // Left шестиугольник
-    const folderLeftOrbit = folderOrbits.addFolder("Left (дальний)");
-    folderLeftOrbit.add(this.leftParams, "radius", 1, 30, 0.5)
-      .name("Радиус")
-      .onChange(() => this.updatePosition(this.hexagonLeft, this.leftParams));
-    folderLeftOrbit.add(this.leftParams, "azimuth", -180, 180, 0.5)
-      .name("Azimuth °")
-      .onChange(() => this.updatePosition(this.hexagonLeft, this.leftParams));
-    folderLeftOrbit.add(this.leftParams, "elevation", -90, 90, 0.5)
-      .name("Elevation °")
-      .onChange(() => this.updatePosition(this.hexagonLeft, this.leftParams));
+    const folder2 = folderOrbits.addFolder("2. Left (дальний)");
+    folder2.add(this.params2, "radius", 1, 30, 0.5).name("Радиус").onChange(() => this.updatePosition(this.hexagon2, this.params2));
+    folder2.add(this.params2, "azimuth", -180, 180, 0.5).name("Azimuth °").onChange(() => this.updatePosition(this.hexagon2, this.params2));
+    folder2.add(this.params2, "elevation", -90, 90, 0.5).name("Elevation °").onChange(() => this.updatePosition(this.hexagon2, this.params2));
+
+    const folder3 = folderOrbits.addFolder("3. Right (справа)");
+    folder3.add(this.params3, "radius", 1, 30, 0.5).name("Радиус").onChange(() => this.updatePosition(this.hexagon3, this.params3));
+    folder3.add(this.params3, "azimuth", -180, 180, 0.5).name("Azimuth °").onChange(() => this.updatePosition(this.hexagon3, this.params3));
+    folder3.add(this.params3, "elevation", -90, 90, 0.5).name("Elevation °").onChange(() => this.updatePosition(this.hexagon3, this.params3));
 
     // === ПАПКА 2: ИНТЕНСИВНОСТЬ СВЕТА ===
     const folderLight = this.gui.addFolder("💡 Интенсивность света");
 
-    const folderFrontLight = folderLight.addFolder("Front (ближний)");
-    folderFrontLight.add(this.frontParams, "lightIntensity", 0, 30, 0.5)
-      .name("RectArea")
-      .onChange(() => this.updateLight());
-    folderFrontLight.add(this.frontParams, "backLightIntensity", 0, 50, 1)
-      .name("Back Light")
-      .onChange(() => this.updateLight());
+    const folderLight1 = folderLight.addFolder("1. Front");
+    folderLight1.add(this.params1, "lightIntensity", 0, 30, 0.5).name("RectArea").onChange(() => this.updateLight());
+    folderLight1.add(this.params1, "backLightIntensity", 0, 50, 1).name("Back Light").onChange(() => this.updateLight());
 
-    const folderLeftLight = folderLight.addFolder("Left (дальний)");
-    folderLeftLight.add(this.leftParams, "lightIntensity", 0, 30, 0.5)
-      .name("RectArea")
-      .onChange(() => this.updateLight());
-    folderLeftLight.add(this.leftParams, "backLightIntensity", 0, 50, 1)
-      .name("Back Light")
-      .onChange(() => this.updateLight());
+    const folderLight2 = folderLight.addFolder("2. Left");
+    folderLight2.add(this.params2, "lightIntensity", 0, 30, 0.5).name("RectArea").onChange(() => this.updateLight());
+    folderLight2.add(this.params2, "backLightIntensity", 0, 50, 1).name("Back Light").onChange(() => this.updateLight());
 
-    // === КНОПКИ СБРОСА ===
-    const folderReset = this.gui.addFolder("⚙️ Сброс");
+    const folderLight3 = folderLight.addFolder("3. Right");
+    folderLight3.add(this.params3, "lightIntensity", 0, 30, 0.5).name("RectArea").onChange(() => this.updateLight());
+    folderLight3.add(this.params3, "backLightIntensity", 0, 50, 1).name("Back Light").onChange(() => this.updateLight());
+
+    // === ПАПКА 3: СОХРАНЕНИЕ ===
+    const folderSave = this.gui.addFolder("💾 Сохранение настроек");
+    
+    folderSave.add({ save: () => this.saveAndExport() }, "save").name("💾 Сохранить и экспортировать");
+    folderSave.add({ load: () => this.loadSettings() }, "load").name("📂 Загрузить сохранение");
+    
+    folderSave.add({
+      resetAll: () => {
+        this.settingsManager.clear();
+        location.reload();
+      }
+    }, "resetAll").name("🔄 Сбросить всё (reload)");
+
+    // === КНОПКИ СБРОСА ПОЗИЦИЙ ===
+    const folderReset = this.gui.addFolder("⚙️ Сброс позиций");
+    
     folderReset.add({
-      "Сбросить Front": () => {
-        this.updateParamsFromPosition(this.frontParams, new THREE.Vector3(-4, -1.5, 4));
-        this.frontParams.lightIntensity = 7.5;
-        this.frontParams.backLightIntensity = 15;
-        this.updatePosition(this.hexagonFront, this.frontParams);
+      reset1: () => {
+        this.updateParamsFromPosition(this.params1, new THREE.Vector3(-4, -1.5, 4));
+        this.params1.lightIntensity = 7.5;
+        this.params1.backLightIntensity = 15;
+        this.updatePosition(this.hexagon1, this.params1);
         this.updateLight();
         this.updateGUI();
       }
-    }, "Сбросить Front").name("↻ Front");
+    }, "reset1").name("↻ Front");
 
     folderReset.add({
-      "Сбросить Left": () => {
-        this.updateParamsFromPosition(this.leftParams, new THREE.Vector3(8, -3, 8));
-        this.leftParams.lightIntensity = 7.5;
-        this.leftParams.backLightIntensity = 15;
-        this.updatePosition(this.hexagonLeft, this.leftParams);
+      reset2: () => {
+        this.updateParamsFromPosition(this.params2, new THREE.Vector3(8, -3, 8));
+        this.params2.lightIntensity = 7.5;
+        this.params2.backLightIntensity = 15;
+        this.updatePosition(this.hexagon2, this.params2);
         this.updateLight();
         this.updateGUI();
       }
-    }, "Сбросить Left").name("↻ Left");
+    }, "reset2").name("↻ Left");
+
+    folderReset.add({
+      reset3: () => {
+        this.updateParamsFromPosition(this.params3, new THREE.Vector3(-8, -3, 8));
+        this.params3.lightIntensity = 7.5;
+        this.params3.backLightIntensity = 15;
+        this.updatePosition(this.hexagon3, this.params3);
+        this.updateLight();
+        this.updateGUI();
+      }
+    }, "reset3").name("↻ Right");
   }
 
   updateGUI() {
@@ -183,7 +258,6 @@ export default class HexagonsControlPanel {
       for (const controller of folder.controllers) {
         controller.updateDisplay();
       }
-      // Вложенные папки
       for (const subFolder of Object.values(folder.folders)) {
         for (const controller of subFolder.controllers) {
           controller.updateDisplay();

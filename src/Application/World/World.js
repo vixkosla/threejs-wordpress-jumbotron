@@ -5,7 +5,10 @@ import GUI from "lil-gui";
 import {
   HEXAGON_1_POSITION,
   HEXAGON_2_POSITION,
+  HEXAGON_3_POSITION,
+  HEXAGON_1_LABEL,
   HEXAGON_2_LABEL,
+  HEXAGON_3_LABEL,
 } from "./Config/HexagonPositions.js";
 import HexagonsControlPanel from "./HexagonsControlPanel.js";
 
@@ -68,7 +71,7 @@ export default class World {
     // Получаем bounding box композиции для расчёта размера шестиугольника
     const boundingBox = this.myModel.getBoundingBox();
 
-    // Шестиугольник 1: ближе к камере (основной свет)
+    // Шестиугольник 1: Front (ближний)
     const position1 = new THREE.Vector3(
       HEXAGON_1_POSITION.x,
       HEXAGON_1_POSITION.y,
@@ -78,11 +81,11 @@ export default class World {
       this.scene,
       boundingBox,
       position1,
-      "(Front)"
+      HEXAGON_1_LABEL
     );
     this.items.push(this.backlightHexagon1);
 
-    // Шестиугольник 2: дальний, в соседней декарте
+    // Шестиугольник 2: Left (дальний)
     const position2 = new THREE.Vector3(
       HEXAGON_2_POSITION.x,
       HEXAGON_2_POSITION.y,
@@ -96,12 +99,28 @@ export default class World {
     );
     this.items.push(this.backlightHexagon2);
 
-    // Единая панель управления обоими шестиугольниками
+    // Шестиугольник 3: Right (справа)
+    const position3 = new THREE.Vector3(
+      HEXAGON_3_POSITION.x,
+      HEXAGON_3_POSITION.y,
+      HEXAGON_3_POSITION.z
+    );
+    this.backlightHexagon3 = new BacklightHexagon(
+      this.scene,
+      boundingBox,
+      position3,
+      HEXAGON_3_LABEL
+    );
+    this.items.push(this.backlightHexagon3);
+
+    // Единая панель управления для всех трёх шестиугольников
     this.hexagonsPanel = new HexagonsControlPanel(
       this.backlightHexagon1,
       this.backlightHexagon2,
+      this.backlightHexagon3,
       position1,
-      position2
+      position2,
+      position3
     );
   }
 
