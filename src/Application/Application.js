@@ -41,7 +41,7 @@ export default class Application {
       100,
     );
     // Позиция камеры: как при FOV 10-15 (изометрический вид)
-    this.camera.position.set(20, 20, 20);
+    this.camera.position.set(8, 3, -8);
     this.camera.lookAt(0, 0, 0);
     this.scene.add(this.camera);
   }
@@ -53,7 +53,7 @@ export default class Application {
     });
     this.renderer.setSize(this.sizes.width, this.sizes.height);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    
+
     // Включаем поддержку RectAreaLight
     this.renderer.useLegacyLights = false;
 
@@ -65,43 +65,46 @@ export default class Application {
   setupPostProcessing() {
     // EffectComposer для post-processing
     this.composer = new EffectComposer(this.renderer);
-    
+
     // RenderPass - рендерит сцену
     const renderPass = new RenderPass(this.scene, this.camera);
     this.composer.addPass(renderPass);
-    
+
     // UnrealBloomPass - bloom эффект
     this.bloomParams = {
       strength: 1.5,
       radius: 0.4,
       threshold: 0.85,
     };
-    
+
     this.bloomPass = new UnrealBloomPass(
       new THREE.Vector2(this.sizes.width, this.sizes.height),
       this.bloomParams.strength,
       this.bloomParams.radius,
-      this.bloomParams.threshold
+      this.bloomParams.threshold,
     );
     this.composer.addPass(this.bloomPass);
   }
 
   setupBloomGUI() {
     const gui = new GUI({ title: "Bloom" });
-    
-    gui.add(this.bloomParams, "strength", 0, 3, 0.1)
+
+    gui
+      .add(this.bloomParams, "strength", 0, 3, 0.1)
       .name("Strength")
       .onChange(() => {
         this.bloomPass.strength = this.bloomParams.strength;
       });
-    
-    gui.add(this.bloomParams, "radius", 0, 1, 0.01)
+
+    gui
+      .add(this.bloomParams, "radius", 0, 1, 0.01)
       .name("Radius")
       .onChange(() => {
         this.bloomPass.radius = this.bloomParams.radius;
       });
-    
-    gui.add(this.bloomParams, "threshold", 0, 1, 0.01)
+
+    gui
+      .add(this.bloomParams, "threshold", 0, 1, 0.01)
       .name("Threshold")
       .onChange(() => {
         this.bloomPass.threshold = this.bloomParams.threshold;
@@ -124,7 +127,7 @@ export default class Application {
 
       this.renderer.setSize(this.sizes.width, this.sizes.height);
       this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-      
+
       // Обновляем composer для нового размера
       this.composer.setSize(this.sizes.width, this.sizes.height);
       this.bloomPass.resolution.set(this.sizes.width, this.sizes.height);
