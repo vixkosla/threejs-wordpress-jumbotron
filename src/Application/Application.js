@@ -11,6 +11,7 @@ export default class Application {
     this.setupRenderer();
     this.setupWorld();
     this.setupEventListeners();
+    this.setupMouseTracking();
 
     // Запуск цикла
     this.clock = new THREE.Clock();
@@ -78,6 +79,24 @@ export default class Application {
     window.addEventListener("click", () => {
       console.log("Click event! Triggering animation...");
       this.world.triggerModelAction();
+    });
+  }
+
+  /**
+   * Отслеживание позиции мыши для анимации
+   */
+  setupMouseTracking() {
+    this.mouse = new THREE.Vector2(0, 0); // Нормализованные координаты (-1 до 1)
+    
+    window.addEventListener("mousemove", (event) => {
+      // Нормализуем координаты мыши от -1 до 1
+      this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+      this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+      
+      // Передаём позицию мыши в мир
+      if (this.world) {
+        this.world.updateMousePosition(this.mouse);
+      }
     });
   }
 

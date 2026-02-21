@@ -3,9 +3,9 @@ import GMaterial from "./Materials/GMaterial.js";
 
 // Цвета для блоков (мягкие, полупрозрачные оттенки)
 // Фиолетовый - лёгкий пастельный с синим оттенком
-const COLOR_PURPLE = 0xb8b8ff;  // лёгкий фиолетово-синий (пастельный)
-const COLOR_LIME = 0xa3e635;    // мягкий салатовый (свежее яблоко)
-const COLOR_GLASS = 0xf8f9fa;   // стеклянный белый (полупрозрачный пластик)
+const COLOR_PURPLE = 0xb8b8ff; // лёгкий фиолетово-синий (пастельный)
+const COLOR_LIME = 0xa3e635; // мягкий салатовый (свежее яблоко)
+const COLOR_GLASS = 0xf8f9fa; // стеклянный белый (полупрозрачный пластик)
 
 // Нумерация блоков (вид сверху, слева направо):
 // Верхний слой (y=2.5):
@@ -22,32 +22,32 @@ const ginformation = [
   {
     position: [-2.0, 1, 0.5],
     rotation: [0, Math.PI, 0],
-    color: COLOR_PURPLE,  // левый нижний - сине-фиолетовый
+    color: COLOR_PURPLE, // левый нижний - сине-фиолетовый
   },
   {
-    position: [-0.5, 2, 2],
+    position: [-0.5, 2, 2.25],
     rotation: [-Math.PI / 2, Math.PI / 2, 0],
-    color: COLOR_GLASS,  // центральный верхний - белый
+    color: COLOR_PURPLE, // центральный верхний - белый
   },
   {
     position: [0, 0.5, 2],
     rotation: [-Math.PI / 2, Math.PI, 0],
-    color: COLOR_GLASS,  // центральный нижний - белый
+    color: COLOR_GLASS, // центральный нижний - белый
   },
   {
     position: [-2, 2.5, 1],
     rotation: [-Math.PI / 2, 2 * Math.PI, -Math.PI / 2],
-    color: COLOR_PURPLE,  // самый верхний слева - сине-фиолетовый (первый)
+    color: COLOR_LIME, // самый верхний слева - сине-фиолетовый (первый)
   },
   {
     position: [-2, 2.5, 2.5],
     rotation: [Math.PI / 2, 0, Math.PI],
-    color: COLOR_LIME,  // следующий верхний - салатовый (смежный с первым)
+    color: COLOR_GLASS, // следующий верхний - салатовый (смежный с первым)
   },
   {
     position: [-3, 1, 1],
     rotation: [-Math.PI / 2, Math.PI / 2, -2 * Math.PI],
-    color: COLOR_GLASS,  // левый дальний - белый
+    color: COLOR_GLASS, // левый дальний - белый
   },
 ];
 
@@ -55,7 +55,7 @@ const tinformation = [
   {
     position: [-0.5, 1.5, 1.0],
     rotation: [0, -Math.PI / 2, Math.PI / 2],
-    color: COLOR_GLASS,  // T-блок - стеклянный белый (центральный)
+    color: COLOR_GLASS, // T-блок - стеклянный белый (центральный)
   },
 ];
 
@@ -68,6 +68,23 @@ export default class MyModel {
     this.group = new THREE.Object3D();
     // Передаём scene для работы GUI
     this.gMaterial = new GMaterial(scene);
+
+    // Позиция мыши (нормализованная от -1 до 1)
+    this.mouse = new THREE.Vector2(0, 0);
+    
+    // Векторы смещения для каждого блока (направление "отталкивания")
+    // Порядок соответствует ginformation массиву
+    this.pushVectors = [
+      new THREE.Vector3(-0.5, 1, 0.5),   // 0: левый нижний
+      new THREE.Vector3(1, 1, 1),        // 1: центральный верхний
+      new THREE.Vector3(0, 0, 0),        // 2: центральный нижний (не смещается)
+      new THREE.Vector3(1, 1, -1),       // 3: самый верхний слева
+      new THREE.Vector3(0, 0, 0),        // 4: следующий верхний (не смещается)
+      new THREE.Vector3(1, 0, 0),        // 5: левый дальний
+    ];
+    
+    // Коэффициент амортизации (уменьшает влияние мыши)
+    this.dampingFactor = 0.3;
 
     this.composeCube();
     this.translateBlocks();
@@ -182,7 +199,7 @@ export default class MyModel {
 
     // 5. Создаём меш с transmission материалом (через cloneWithColor для обновления)
     const material = this.gMaterial.cloneWithColor(color);
-    
+
     const letterT = new THREE.Mesh(geometry, material);
     letterT.castShadow = true;
 
@@ -200,11 +217,41 @@ export default class MyModel {
     }, 500);
   }
 
+  /**
+   * Обновить позицию мыши
+   */
+  updateMousePosition(mouse) {
+    this.mouse.copy(mouse);
+  }
+
   // Вызывается каждый кадр
   update(time) {
     // Базовая idle анимация
     // this.mesh.rotation.y = time * 0.5;
     // this.mesh.rotation.x = time * 0.2;
+
+    // Анимация от мыши - "отталкивание" блоков от центра
+    this.meshes.forEach((mesh, index) => {
+      const pushVector = this.pushVectors[index];
+      if (pushVector && pushVector.length() > 0) {
+        // Сохраняем оригинальную позицию (из initialPosition если есть)
+        const originalPos = mesh.userData.initialPosition || mesh.position.clone();
+        if (!mesh.userData.initialPosition) {
+          mesh.userData.initialPosition = originalPos.clone();
+        }
+        
+        // Смещение на основе позиции мыши * вектор направления * амортизация
+        const offsetX = this.mouse.x * pushVector.x * this.dampingFactor;
+        const offsetZ = this.mouse.y * pushVector.z * this.dampingFactor;
+        const offsetY = this.mouse.y * pushVector.y * this.dampingFactor * 0.5;
+        
+        mesh.position.set(
+          originalPos.x + offsetX,
+          originalPos.y + offsetY,
+          originalPos.z + offsetZ
+        );
+      }
+    });
 
     // Логика "событийной" анимации
     if (this.isActive) {
@@ -231,7 +278,11 @@ export default class MyModel {
 
     // Добавляем T-меш из сцены
     this.scene.traverse((child) => {
-      if (child.isMesh && child.geometry && child.material.color?.equals(new THREE.Color(0x00ff00))) {
+      if (
+        child.isMesh &&
+        child.geometry &&
+        child.material.color?.equals(new THREE.Color(0x00ff00))
+      ) {
         const meshBox = new THREE.Box3().setFromObject(child);
         box.union(meshBox);
         hasObjects = true;

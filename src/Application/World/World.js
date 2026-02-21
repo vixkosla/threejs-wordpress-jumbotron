@@ -199,6 +199,15 @@ export default class World {
     }
   }
 
+  /**
+   * Обновить позицию мыши (для анимации)
+   */
+  updateMousePosition(mouse) {
+    if (this.myModel) {
+      this.myModel.updateMousePosition(mouse);
+    }
+  }
+
   update(time) {
     // Обновляем все объекты в мире
     this.items.forEach((item) => {
