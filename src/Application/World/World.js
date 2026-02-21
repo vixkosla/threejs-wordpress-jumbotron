@@ -7,8 +7,7 @@ import {
   HEXAGON_2_POSITION,
   HEXAGON_2_LABEL,
 } from "./Config/HexagonPositions.js";
-import OrbitalHexagonGUI from "./OrbitalHexagonGUI.js";
-import OrbitalHexagonGUIFront from "./OrbitalHexagonGUIFront.js";
+import HexagonsControlPanel from "./HexagonsControlPanel.js";
 
 export default class World {
   constructor(scene) {
@@ -69,7 +68,7 @@ export default class World {
     // Получаем bounding box композиции для расчёта размера шестиугольника
     const boundingBox = this.myModel.getBoundingBox();
 
-    // Шестиугольник 1: ближе к камере (основной свет) - орбитальный
+    // Шестиугольник 1: ближе к камере (основной свет)
     const position1 = new THREE.Vector3(
       HEXAGON_1_POSITION.x,
       HEXAGON_1_POSITION.y,
@@ -83,13 +82,7 @@ export default class World {
     );
     this.items.push(this.backlightHexagon1);
 
-    // GUI для орбитального вращения первого шестиугольника
-    this.orbitalGUIFront = new OrbitalHexagonGUIFront(
-      this.backlightHexagon1,
-      position1
-    );
-
-    // Шестиугольник 2: дальний, в соседней декарте (орбитальный)
+    // Шестиугольник 2: дальний, в соседней декарте
     const position2 = new THREE.Vector3(
       HEXAGON_2_POSITION.x,
       HEXAGON_2_POSITION.y,
@@ -103,9 +96,11 @@ export default class World {
     );
     this.items.push(this.backlightHexagon2);
 
-    // GUI для орбитального вращения второго шестиугольника
-    this.orbitalGUI = new OrbitalHexagonGUI(
+    // Единая панель управления обоими шестиугольниками
+    this.hexagonsPanel = new HexagonsControlPanel(
+      this.backlightHexagon1,
       this.backlightHexagon2,
+      position1,
       position2
     );
   }
