@@ -2,21 +2,21 @@ import * as THREE from "three";
 import GUI from "lil-gui";
 
 /**
- * GUI для управления орбитальным положением шестиугольника
+ * GUI для управления орбитальным положением шестиугольника (Front)
  * Вращение по сфере с радиусом R
  */
-export default class OrbitalHexagonGUI {
+export default class OrbitalHexagonGUIFront {
   constructor(hexagon, initialPosition) {
     this.hexagon = hexagon;
     this.gui = null;
 
     // Сферические координаты
     this.params = {
-      radius: 12,                    // радиус орбиты
+      radius: 4,                     // радиус орбиты (ближний)
       azimuth: 0,                    // угол в XZ плоскости (0-360°)
       elevation: 0,                  // угол возвышения (-90° до 90°)
-      lightIntensity: 15,            // сила света (синхронизировано с hexagon.params.intensity)
-      backLightIntensity: 30,        // задний свет (синхронизировано с hexagon.params.addLightIntensity)
+      lightIntensity: 7.5,           // сила света / 2 (для баланса с RectArea)
+      backLightIntensity: 15,        // задний свет
     };
 
     // Сохраняем начальную позицию
@@ -101,11 +101,11 @@ export default class OrbitalHexagonGUI {
   }
 
   setupGUI() {
-    this.gui = new GUI({ title: "Hexagon Orbit (Left)" });
+    this.gui = new GUI({ title: "Hexagon Orbit (Front)" });
 
     const folderOrbit = this.gui.addFolder("Орбита");
     
-    folderOrbit.add(this.params, "radius", 1, 30, 0.5)
+    folderOrbit.add(this.params, "radius", 1, 15, 0.5)
       .name("Радиус (R)")
       .onChange(() => this.updatePosition());
 
@@ -166,7 +166,7 @@ export default class OrbitalHexagonGUI {
     this.gui.add({ 
       reset: () => {
         this.updateParamsFromPosition();
-        this.params.lightIntensity = this.hexagon.params.intensity;
+        this.params.lightIntensity = this.hexagon.params.intensity / 2;
         this.params.backLightIntensity = this.hexagon.params.addLightIntensity;
         this.updatePosition();
         this.updateGUI();
@@ -203,7 +203,7 @@ export default class OrbitalHexagonGUI {
    */
   getLightParams() {
     return {
-      intensity: this.params.lightIntensity,
+      intensity: this.params.lightIntensity * 2,
       backLightIntensity: this.params.backLightIntensity,
     };
   }

@@ -50,7 +50,7 @@ export default class BacklightHexagon {
     this.group.lookAt(this.lookAtTarget);
 
     this.scene.add(this.group);
-    this.setupGUI();
+    // GUI создаётся внешним контроллером (OrbitalHexagonGUIFront или OrbitalHexagonGUI)
   }
 
   /**
