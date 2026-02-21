@@ -4,7 +4,7 @@ import GUI from "lil-gui";
 /**
  * Шестиугольник-подсветка сзади сцены
  * Работает как источник света для transmission-материалов
- * Использует RectAreaLight + MeshBasicMaterial (белый шестиугольник)
+ * Использует RectAreaLight + белый MeshBasicMaterial (визуальный шестиугольник)
  */
 export default class BacklightHexagon {
   constructor(scene, debug = true) {
@@ -16,26 +16,35 @@ export default class BacklightHexagon {
     this.params = {
       intensity: 15,           // сила света RectAreaLight
       hexagonOpacity: 1.0,     // непрозрачность шестиугольника
-      visible: true,           // показывать ли шестиугольник
-      lightVisible: true,      // показывать ли helper света
+      hexagonVisible: true,    // показывать ли шестиугольник
+      lightVisible: true,      // показывать ли helper света (отладка)
     };
 
     // Позиция: напротив камеры, за сценой
-    // Камера смотрит на (0,0,0), шестиугольник будет с противоположной стороны
-    this.position = new THREE.Vector3(-15, 0, 15);
+    // Камера на (0, 0, 25) смотрит на (0,0,0)
+    // Шестиугольник ставим сзади на (0, 0, -20)
+    this.position = new THREE.Vector3(0, 0, -20);
     this.lookAtTarget = new THREE.Vector3(0, 0, 0);
 
-    // Создаём шестиугольник
+    // Группа для шестиугольника и света
+    this.group = new THREE.Group();
+
+    // Создаём шестиугольник (визуальная часть)
     this.hexagonMesh = this.createHexagon();
-    this.scene.add(this.hexagonMesh);
+    this.group.add(this.hexagonMesh);
 
-    // Создаём RectAreaLight (направленный свет)
+    // Создаём RectAreaLight (источник света)
     this.rectLight = this.createRectAreaLight();
-    this.scene.add(this.rectLight);
+    this.group.add(this.rectLight);
 
-    // Helper для визуализации света
+    // Helper для визуализации света (отладка)
     this.lightHelper = new THREE.RectAreaLightHelper(this.rectLight);
-    this.hexagonMesh.add(this.lightHelper);
+    this.group.add(this.lightHelper);
+
+    this.group.position.copy(this.position);
+    this.group.lookAt(this.lookAtTarget);
+
+    this.scene.add(this.group);
 
     if (this.debug) {
       this.setupGUI();
@@ -43,13 +52,14 @@ export default class BacklightHexagon {
   }
 
   createHexagon() {
-    // Шестиугольник через RingGeometry или CylinderGeometry
+    // Шестиугольник через CylinderGeometry с 6 сегментами
     const radius = 8;
     const geometry = new THREE.CylinderGeometry(radius, radius, 0.1, 6);
     
     // Поворачиваем чтобы стоял на углу (вершиной вверх)
+    // CylinderGeometry по умолчанию лежит на боку, нужно повернуть
+    geometry.rotateX(Math.PI / 2); // кладём на XY плоскость
     geometry.rotateZ(Math.PI / 6); // 30 градусов - поворот на вершину
-    geometry.rotateY(Math.PI / 4); // поворот к камере
 
     const material = new THREE.MeshBasicMaterial({
       color: 0xffffff,
@@ -59,20 +69,19 @@ export default class BacklightHexagon {
     });
 
     const hexagon = new THREE.Mesh(geometry, material);
-    hexagon.position.copy(this.position);
-    hexagon.lookAt(this.lookAtTarget);
-
     return hexagon;
   }
 
   createRectAreaLight() {
-    const width = 12;
-    const height = 12;
+    const width = 14;
+    const height = 14;
     const intensity = this.params.intensity;
 
     const light = new THREE.RectAreaLight(0xffffff, intensity, width, height);
-    light.position.copy(this.position);
-    light.lookAt(this.lookAtTarget);
+    // Свет уже внутри группы, которая смотрит на (0,0,0)
+    // Просто ставим его чуть впереди шестиугольника (в сторону сцены)
+    light.position.set(0, 0, 0.5);
+    light.lookAt(0, 0, -1); // Светит в сторону камеры/сцены
 
     return light;
   }
@@ -83,7 +92,7 @@ export default class BacklightHexagon {
   updateFromParams() {
     this.rectLight.intensity = this.params.intensity;
     this.hexagonMesh.material.opacity = this.params.hexagonOpacity;
-    this.hexagonMesh.visible = this.params.visible;
+    this.hexagonMesh.visible = this.params.hexagonVisible;
     this.lightHelper.visible = this.params.lightVisible;
   }
 
@@ -98,14 +107,14 @@ export default class BacklightHexagon {
       .name("Intensity")
       .onChange(() => this.updateFromParams());
     folderLight.add(this.params, "lightVisible")
-      .name("Показать Helper")
+      .name("Helper (отладка)")
       .onChange(() => this.updateFromParams());
 
     const folderHex = this.gui.addFolder("Шестиугольник");
     folderHex.add(this.params, "hexagonOpacity", 0, 1, 0.05)
       .name("Opacity")
       .onChange(() => this.updateFromParams());
-    folderHex.add(this.params, "visible")
+    folderHex.add(this.params, "hexagonVisible")
       .name("Видимый")
       .onChange(() => this.updateFromParams());
 
@@ -118,12 +127,11 @@ export default class BacklightHexagon {
     this.params = {
       intensity: 15,
       hexagonOpacity: 1.0,
-      visible: true,
+      hexagonVisible: true,
       lightVisible: true,
     };
     this.updateFromParams();
     if (this.gui) {
-      // Обновить значения в GUI
       for (const controller of this.gui.controllers) {
         controller.updateDisplay();
       }
@@ -147,15 +155,10 @@ export default class BacklightHexagon {
     if (this.hexagonMesh) {
       this.hexagonMesh.geometry.dispose();
       this.hexagonMesh.material.dispose();
-      this.scene.remove(this.hexagonMesh);
     }
 
-    if (this.rectLight) {
-      this.scene.remove(this.rectLight);
-    }
-
-    if (this.lightHelper) {
-      this.hexagonMesh.remove(this.lightHelper);
+    if (this.group) {
+      this.scene.remove(this.group);
     }
   }
 }

@@ -1,5 +1,9 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
+import GUI from "lil-gui";
 import World from "./World/World.js";
 
 export default class Application {
@@ -9,8 +13,10 @@ export default class Application {
     this.setupScene();
     this.setupCamera();
     this.setupRenderer();
+    this.setupPostProcessing();
     this.setupWorld();
     this.setupEventListeners();
+    this.setupBloomGUI();
 
     // Запуск цикла
     this.clock = new THREE.Clock();
@@ -47,10 +53,59 @@ export default class Application {
     });
     this.renderer.setSize(this.sizes.width, this.sizes.height);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    
+    // Включаем поддержку RectAreaLight
+    this.renderer.useLegacyLights = false;
 
     // Контролы (опционально)
     this.controls = new OrbitControls(this.camera, this.canvas);
     this.controls.enableDamping = true;
+  }
+
+  setupPostProcessing() {
+    // EffectComposer для post-processing
+    this.composer = new EffectComposer(this.renderer);
+    
+    // RenderPass - рендерит сцену
+    const renderPass = new RenderPass(this.scene, this.camera);
+    this.composer.addPass(renderPass);
+    
+    // UnrealBloomPass - bloom эффект
+    this.bloomParams = {
+      strength: 1.5,
+      radius: 0.4,
+      threshold: 0.85,
+    };
+    
+    this.bloomPass = new UnrealBloomPass(
+      new THREE.Vector2(this.sizes.width, this.sizes.height),
+      this.bloomParams.strength,
+      this.bloomParams.radius,
+      this.bloomParams.threshold
+    );
+    this.composer.addPass(this.bloomPass);
+  }
+
+  setupBloomGUI() {
+    const gui = new GUI({ title: "Bloom" });
+    
+    gui.add(this.bloomParams, "strength", 0, 3, 0.1)
+      .name("Strength")
+      .onChange(() => {
+        this.bloomPass.strength = this.bloomParams.strength;
+      });
+    
+    gui.add(this.bloomParams, "radius", 0, 1, 0.01)
+      .name("Radius")
+      .onChange(() => {
+        this.bloomPass.radius = this.bloomParams.radius;
+      });
+    
+    gui.add(this.bloomParams, "threshold", 0, 1, 0.01)
+      .name("Threshold")
+      .onChange(() => {
+        this.bloomPass.threshold = this.bloomParams.threshold;
+      });
   }
 
   setupWorld() {
@@ -69,6 +124,10 @@ export default class Application {
 
       this.renderer.setSize(this.sizes.width, this.sizes.height);
       this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      
+      // Обновляем composer для нового размера
+      this.composer.setSize(this.sizes.width, this.sizes.height);
+      this.bloomPass.resolution.set(this.sizes.width, this.sizes.height);
     });
 
     // Пример события: Клик вызывает действие
@@ -87,8 +146,8 @@ export default class Application {
     // Обновляем контролы
     this.controls.update();
 
-    // Рендер
-    this.renderer.render(this.scene, this.camera);
+    // Рендер через composer (с post-processing)
+    this.composer.render();
 
     // Следующий кадр
     window.requestAnimationFrame(() => this.tick());
