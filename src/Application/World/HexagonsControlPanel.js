@@ -90,15 +90,6 @@ export default class HexagonsControlPanel {
     this.hexagonLeft.updateFromParams();
   }
 
-  /**
-   * Быстрая установка позиции
-   */
-  setQuickPosition(params, hexagon, azimuth) {
-    params.azimuth = azimuth;
-    this.updatePosition(hexagon, params);
-    this.updateGUI();
-  }
-
   setupGUI() {
     this.gui = new GUI({ title: "🔷 Hexagons Control", width: 320 });
 
@@ -147,39 +138,6 @@ export default class HexagonsControlPanel {
     folderLeftLight.add(this.leftParams, "backLightIntensity", 0, 50, 1)
       .name("Back Light")
       .onChange(() => this.updateLight());
-
-    // === ПАПКА 3: БЫСТРЫЕ ПОЗИЦИИ ===
-    const folderQuick = this.gui.addFolder("⚡ Быстрые позиции");
-
-    const folderFrontQuick = folderQuick.addFolder("Front");
-    const frontQuick = {
-      "0°": () => this.setQuickPosition(this.frontParams, this.hexagonFront, 0),
-      "90°": () => this.setQuickPosition(this.frontParams, this.hexagonFront, 90),
-      "180°": () => this.setQuickPosition(this.frontParams, this.hexagonFront, 180),
-      "-90°": () => this.setQuickPosition(this.frontParams, this.hexagonFront, -90),
-      "45°": () => this.setQuickPosition(this.frontParams, this.hexagonFront, 45),
-      "135°": () => this.setQuickPosition(this.frontParams, this.hexagonFront, 135),
-      "-135°": () => this.setQuickPosition(this.frontParams, this.hexagonFront, -135),
-      "-45°": () => this.setQuickPosition(this.frontParams, this.hexagonFront, -45),
-    };
-    for (const [name, fn] of Object.entries(frontQuick)) {
-      folderFrontQuick.add({ [name]: fn }, name).name(name);
-    }
-
-    const folderLeftQuick = folderQuick.addFolder("Left");
-    const leftQuick = {
-      "0°": () => this.setQuickPosition(this.leftParams, this.hexagonLeft, 0),
-      "90°": () => this.setQuickPosition(this.leftParams, this.hexagonLeft, 90),
-      "180°": () => this.setQuickPosition(this.leftParams, this.hexagonLeft, 180),
-      "-90°": () => this.setQuickPosition(this.leftParams, this.hexagonLeft, -90),
-      "45°": () => this.setQuickPosition(this.leftParams, this.hexagonLeft, 45),
-      "135°": () => this.setQuickPosition(this.leftParams, this.hexagonLeft, 135),
-      "-135°": () => this.setQuickPosition(this.leftParams, this.hexagonLeft, -135),
-      "-45°": () => this.setQuickPosition(this.leftParams, this.hexagonLeft, -45),
-    };
-    for (const [name, fn] of Object.entries(leftQuick)) {
-      folderLeftQuick.add({ [name]: fn }, name).name(name);
-    }
 
     // === КНОПКИ СБРОСА ===
     const folderReset = this.gui.addFolder("⚙️ Сброс");
