@@ -44,7 +44,7 @@ export default class MyModel {
     this.meshes = [];
     this.group = new THREE.Object3D();
     // Передаём scene для работы GUI
-    this.gMaterial = new GMaterial(scene, true);
+    this.gMaterial = new GMaterial(scene);
     this.tMaterial = new TMaterial();
 
     this.composeCube();

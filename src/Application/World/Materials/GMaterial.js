@@ -14,11 +14,10 @@ export const G_COLORS = [
  * Использует MeshPhysicalMaterial с transmission
  */
 export default class GMaterial {
-  constructor(scene, debug = true) {
+  constructor(scene) {
     this.scene = scene;
-    this.debug = debug;
     this.gui = null;
-    
+
     // Параметры материала (можно подбирать в реальном времени)
     this.params = {
       // Основное
@@ -26,16 +25,16 @@ export default class GMaterial {
       thickness: 0.6,            // толщина для преломления
       roughness: 0.35,           // шероховатость (матовость)
       ior: 1.45,                 // индекс преломления
-      
+
       // Цвет
       color: G_COLORS[0].hex,    // базовый цвет
-      
+
       // Эффекты
       metalness: 0.0,            // металличность
       reflectivity: 0.5,         // отражающая способность
       clearcoat: 0.0,            // лаковое покрытие
       clearcoatRoughness: 0.0,   // шероховатость покрытия
-      
+
       // Окружение
       envMapIntensity: 1.0,      // интенсивность карты окружения
       attenuationColor: 0xffffff,// цвет затухания
@@ -43,10 +42,7 @@ export default class GMaterial {
     };
 
     this.material = this.createMaterial();
-    
-    if (this.debug && this.scene) {
-      this.setupGUI();
-    }
+    this.setupGUI();
   }
 
   createMaterial() {
