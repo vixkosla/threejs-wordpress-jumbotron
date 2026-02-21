@@ -105,20 +105,20 @@ export default class MyModel {
       new THREE.Vector3(-1, 0, 0),     // 5: левый дальний - влево
     ];
     
-    // Чувствительность к ускорению мыши (гидравлика - меньше)
-    this.sensitivity = 0.4;
+    // Чувствительность к ускорению мыши (гидравлика)
+    this.sensitivity = 1.5;
     
-    // Максимальная амплитуда "взмаха" (гидравлика - больше для плавности)
-    this.maxAmplitude = 2.0;
+    // Максимальная амплитуда "взмаха"
+    this.maxAmplitude = 4.0;
     
     // Длительность возврата (секунды) - "гидравлика" (медленно)
-    this.returnDuration = 4.0;
+    this.returnDuration = 3.0;
     
     // Задержка перед возвратом (гидравлическая пауза)
-    this.returnDelay = 0.8;
+    this.returnDelay = 0.5;
     
     // Волновая задержка между блоками (секунды)
-    this.waveDelay = 0.15;
+    this.waveDelay = 0.1;
     
     // Храним GSAP твины для каждого блока
     this.blockTweens = [];
