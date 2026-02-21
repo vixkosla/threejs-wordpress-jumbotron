@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import GUI from "lil-gui";
 import SettingsManager from "./SettingsManager.js";
+import { DEFAULT_LIGHT_SETTINGS } from "./Config/HexagonPositions.js";
 
 /**
  * Единая панель управления тремя шестиугольниками
@@ -14,23 +15,18 @@ export default class HexagonsControlPanel {
     this.gui = null;
     this.settingsManager = new SettingsManager();
 
+    // Загружаем дефолтные настройки из конфига
+    const defaults = DEFAULT_LIGHT_SETTINGS;
+
     // Параметры для каждого шестиугольника
-    this.params1 = { radius: 4, azimuth: 0, elevation: 0, lightIntensity: 7.5, backLightIntensity: 15 };
-    this.params2 = { radius: 12, azimuth: 0, elevation: 0, lightIntensity: 7.5, backLightIntensity: 15 };
-    this.params3 = { radius: 12, azimuth: 0, elevation: 0, lightIntensity: 7.5, backLightIntensity: 15 };
+    this.params1 = { ...defaults.hexagon1 };
+    this.params2 = { ...defaults.hexagon2 };
+    this.params3 = { ...defaults.hexagon3 };
 
-    // Вычисляем начальные углы из позиций
-    this.updateParamsFromPosition(this.params1, position1);
-    this.updateParamsFromPosition(this.params2, position2);
-    this.updateParamsFromPosition(this.params3, position3);
-
-    // Синхронизируем интенсивность
-    this.params1.lightIntensity = this.hexagon1.params.intensity / 2;
-    this.params1.backLightIntensity = this.hexagon1.params.addLightIntensity;
-    this.params2.lightIntensity = this.hexagon2.params.intensity / 2;
-    this.params2.backLightIntensity = this.hexagon2.params.addLightIntensity;
-    this.params3.lightIntensity = this.hexagon3.params.intensity / 2;
-    this.params3.backLightIntensity = this.hexagon3.params.addLightIntensity;
+    // Вычисляем начальные углы из позиций (если радиус не задан)
+    if (!defaults.hexagon1.radius) this.updateParamsFromPosition(this.params1, position1);
+    if (!defaults.hexagon2.radius) this.updateParamsFromPosition(this.params2, position2);
+    if (!defaults.hexagon3.radius) this.updateParamsFromPosition(this.params3, position3);
 
     this.setupGUI();
     this.updatePositions();
@@ -219,9 +215,7 @@ export default class HexagonsControlPanel {
     
     folderReset.add({
       reset1: () => {
-        this.updateParamsFromPosition(this.params1, new THREE.Vector3(-4, -1.5, 4));
-        this.params1.lightIntensity = 7.5;
-        this.params1.backLightIntensity = 15;
+        Object.assign(this.params1, DEFAULT_LIGHT_SETTINGS.hexagon1);
         this.updatePosition(this.hexagon1, this.params1);
         this.updateLight();
         this.updateGUI();
@@ -230,9 +224,7 @@ export default class HexagonsControlPanel {
 
     folderReset.add({
       reset2: () => {
-        this.updateParamsFromPosition(this.params2, new THREE.Vector3(8, -3, 8));
-        this.params2.lightIntensity = 7.5;
-        this.params2.backLightIntensity = 15;
+        Object.assign(this.params2, DEFAULT_LIGHT_SETTINGS.hexagon2);
         this.updatePosition(this.hexagon2, this.params2);
         this.updateLight();
         this.updateGUI();
@@ -241,9 +233,7 @@ export default class HexagonsControlPanel {
 
     folderReset.add({
       reset3: () => {
-        this.updateParamsFromPosition(this.params3, new THREE.Vector3(-8, -3, 8));
-        this.params3.lightIntensity = 7.5;
-        this.params3.backLightIntensity = 15;
+        Object.assign(this.params3, DEFAULT_LIGHT_SETTINGS.hexagon3);
         this.updatePosition(this.hexagon3, this.params3);
         this.updateLight();
         this.updateGUI();
