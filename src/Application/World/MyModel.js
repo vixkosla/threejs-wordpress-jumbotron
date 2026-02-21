@@ -1,12 +1,12 @@
 import * as THREE from "three";
 import GMaterial from "./Materials/GMaterial.js";
-import { gsap } from "gsap";
+import * as CANNON from "cannon-es";
 
 // Цвета для блоков (мягкие, полупрозрачные оттенки)
 // Фиолетовый - лёгкий пастельный с синим оттенком
 const COLOR_PURPLE = 0xb8b8ff; // лёгкий фиолетово-синий (пастельный)
-const COLOR_LIME = 0xa3e635; // мягкий салатовый (свежее яблоко)
-const COLOR_GLASS = 0xf8f9fa; // стеклянный белый (полупрозрачный пластик)
+const COLOR_LIME = 0xa3e635;    // мягкий салатовый (свежее яблоко)
+const COLOR_GLASS = 0xf8f9fa;   // стеклянный белый (полупрозрачный пластик)
 
 // Нумерация блоков (вид сверху, слева направо):
 // Верхний слой (y=2.5):
@@ -27,43 +27,37 @@ const COLOR_GLASS = 0xf8f9fa; // стеклянный белый (полупро
 //   3. [-2, 2.5, 1] - вверх (0, 1)
 //   4. [-2, 2.5, 2.5] - вправо-вверх (0.5, 0.5)
 //   5. [-3, 1, 1] - влево (-1, 0)
-//
-// Гидравлический эффект:
-// - Подъём: 1.2s (медленно, плавно)
-// - Возврат: 4.0s (очень медленно, синусоида)
-// - Волновая задержка: 0.15s между блоками
-// - Пауза перед возвратом: 0.8s
 
 const ginformation = [
   {
     position: [-2.0, 1, 0.5],
     rotation: [0, Math.PI, 0],
-    color: COLOR_PURPLE, // левый нижний - сине-фиолетовый
+    color: COLOR_PURPLE,  // левый нижний - сине-фиолетовый
   },
   {
-    position: [-0.5, 2, 2.25],
+    position: [-0.5, 2, 2],
     rotation: [-Math.PI / 2, Math.PI / 2, 0],
-    color: COLOR_PURPLE, // центральный верхний - белый
+    color: COLOR_GLASS,  // центральный верхний - белый
   },
   {
     position: [0, 0.5, 2],
     rotation: [-Math.PI / 2, Math.PI, 0],
-    color: COLOR_GLASS, // центральный нижний - белый
+    color: COLOR_GLASS,  // центральный нижний - белый
   },
   {
     position: [-2, 2.5, 1],
     rotation: [-Math.PI / 2, 2 * Math.PI, -Math.PI / 2],
-    color: COLOR_LIME, // самый верхний слева - сине-фиолетовый (первый)
+    color: COLOR_PURPLE,  // самый верхний слева - сине-фиолетовый
   },
   {
     position: [-2, 2.5, 2.5],
     rotation: [Math.PI / 2, 0, Math.PI],
-    color: COLOR_GLASS, // следующий верхний - салатовый (смежный с первым)
+    color: COLOR_LIME,  // следующий верхний - салатовый
   },
   {
     position: [-3, 1, 1],
     rotation: [-Math.PI / 2, Math.PI / 2, -2 * Math.PI],
-    color: COLOR_GLASS, // левый дальний - белый
+    color: COLOR_GLASS,  // левый дальний - белый
   },
 ];
 
@@ -71,7 +65,7 @@ const tinformation = [
   {
     position: [-0.5, 1.5, 1.0],
     rotation: [0, -Math.PI / 2, Math.PI / 2],
-    color: COLOR_GLASS, // T-блок - стеклянный белый (центральный)
+    color: COLOR_GLASS,  // T-блок - стеклянный белый (центральный)
   },
 ];
 
@@ -85,17 +79,21 @@ export default class MyModel {
     // Передаём scene для работы GUI
     this.gMaterial = new GMaterial(scene);
 
+    // Физический мир cannon-es
+    this.world = new CANNON.World();
+    this.world.gravity.set(0, 0, 0); // Нет гравитации (гидравлика)
+    
+    // Физические тела для каждого блока
+    this.physicsBodies = [];
+    
     // Позиция мыши (нормализованная от -1 до 1)
     this.mouse = new THREE.Vector2(0, 0);
     this.prevMouse = new THREE.Vector2(0, 0);
     
-    // Скорость мыши (абсолютная величина ускорения)
+    // Скорость мыши (вектор)
     this.mouseVelocity = new THREE.Vector2(0, 0);
-    this.mouseAcceleration = 0; // Скалярная величина ускорения
     
-    // Векторы смещения для каждого блока (направление "отталкивания")
-    // Порядок соответствует ginformation массиву
-    // Все 6 блоков участвуют в анимации
+    // Векторы направления для каждого блока
     this.pushVectors = [
       new THREE.Vector3(-1, 0.3, 0),   // 0: левый нижний - влево-вверх
       new THREE.Vector3(0.5, 1, 0),    // 1: центральный верхний - вверх-вправо
@@ -105,29 +103,57 @@ export default class MyModel {
       new THREE.Vector3(-1, 0, 0),     // 5: левый дальний - влево
     ];
     
-    // Чувствительность к ускорению мыши (гидравлика)
-    this.sensitivity = 2.5;
-    
-    // Максимальная амплитуда "взмаха"
-    this.maxAmplitude = 5.0;
-    
-    // Длительность возврата (секунды) - "гидравлика" (медленно)
-    this.returnDuration = 2.5;
-    
-    // Задержка перед возвратом (гидравлическая пауза)
-    this.returnDelay = 0.3;
-    
-    // Волновая задержка между блоками (секунды)
-    this.waveDelay = 0.08;
-    
-    // Пружинистость возврата (0-1, меньше = более плавный)
-    this.returnElasticity = 0.7;
-    
-    // Храним GSAP твины для каждого блока
-    this.blockTweens = [];
+    // Параметры физики
+    this.forceMultiplier = 15;  // Множитель силы
+    this.damping = 0.95;         // Затухание скорости
+    this.maxForce = 50;          // Максимальная сила
 
     this.composeCube();
     this.translateBlocks();
+    this.setupPhysics();
+  }
+
+  /**
+   * Настроить физику для каждого блока
+   */
+  setupPhysics() {
+    this.meshes.forEach((mesh, index) => {
+      // Создаём физическое тело
+      const shape = new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5));
+      const body = new CANNON.Body({
+        mass: 1, // Динамическое тело
+        position: new CANNON.Vec3(
+          mesh.position.x,
+          mesh.position.y,
+          mesh.position.z
+        ),
+        linearDamping: this.damping,
+        angularDamping: 0.99,
+      });
+      
+      body.addShape(shape);
+      this.world.addBody(body);
+      this.physicsBodies.push(body);
+      
+      // Сохраняем оригинальную позицию
+      mesh.userData.originalPosition = mesh.position.clone();
+      mesh.userData.physicsIndex = index;
+    });
+  }
+
+  /**
+   * Обновить позицию мыши
+   */
+  updateMousePosition(mouse) {
+    // Сохраняем предыдущую позицию
+    this.prevMouse.copy(this.mouse);
+    
+    // Обновляем текущую
+    this.mouse.copy(mouse);
+    
+    // Вычисляем скорость мыши
+    this.mouseVelocity.x = this.mouse.x - this.prevMouse.x;
+    this.mouseVelocity.y = this.mouse.y - this.prevMouse.y;
   }
 
   composeCube() {
@@ -154,15 +180,13 @@ export default class MyModel {
     this.scene.traverse((child) => {
       if (child.isMesh) {
         const y = child.position.y;
-
         const delta = -1.75;
-
         child.position.setY(y + delta);
       }
     });
   }
 
-  initGMesh(color = COLOR_WHITE) {
+  initGMesh(color = COLOR_GLASS) {
     const shape = new THREE.Shape();
 
     // Параметры
@@ -239,7 +263,7 @@ export default class MyModel {
 
     // 5. Создаём меш с transmission материалом (через cloneWithColor для обновления)
     const material = this.gMaterial.cloneWithColor(color);
-
+    
     const letterT = new THREE.Mesh(geometry, material);
     letterT.castShadow = true;
 
@@ -257,77 +281,47 @@ export default class MyModel {
     }, 500);
   }
 
-  /**
-   * Обновить позицию мыши
-   */
-  updateMousePosition(mouse) {
-    // Сохраняем предыдущую позицию
-    this.prevMouse.copy(this.mouse);
-    
-    // Обновляем текущую
-    this.mouse.copy(mouse);
-    
-    // Вычисляем скорость (вектор)
-    this.mouseVelocity.x = this.mouse.x - this.prevMouse.x;
-    this.mouseVelocity.y = this.mouse.y - this.prevMouse.y;
-    
-    // Вычисляем абсолютную величину ускорения (скаляр)
-    this.mouseAcceleration = Math.sqrt(
-      this.mouseVelocity.x ** 2 + this.mouseVelocity.y ** 2
-    );
-  }
-
   // Вызывается каждый кадр
-  update(time) {
-    // Базовая idle анимация
-    // this.mesh.rotation.y = time * 0.5;
-    // this.mesh.rotation.x = time * 0.2;
+  update(time, deltaTime = 0.016) {
+    // Обновляем физический мир
+    this.world.step(1 / 60, deltaTime, 3);
 
-    // Анимация "перышко на ветру" с использованием GSAP
-    this.meshes.forEach((mesh, index) => {
+    // Применяем силу от мыши к каждому блоку
+    this.physicsBodies.forEach((body, index) => {
       const pushVector = this.pushVectors[index];
       if (pushVector && pushVector.length() > 0) {
-        // Сохраняем оригинальную позицию
-        if (!mesh.userData.initialPosition) {
-          mesh.userData.initialPosition = mesh.position.clone();
-          mesh.userData.currentAmplitude = 0;
-        }
-        
-        // 2D скалярное произведение скорости на вектор направления
-        // Проверяем движение в направлении вектора
+        // Скалярное произведение скорости мыши на вектор направления
         const velocityDotVector = 
           this.mouseVelocity.x * pushVector.x + 
           this.mouseVelocity.y * pushVector.y;
         
-        // Если есть ускорение в направлении вектора — запускаем "гидравлический взмах"
-        if (velocityDotVector > 0.0005) {  // Более чувствительный порог
-          // Вычисляем амплитуду на основе ускорения
-          const amplitude = Math.min(
-            velocityDotVector * this.sensitivity,
-            this.maxAmplitude
+        // Если есть движение в направлении вектора — применяем силу
+        if (Math.abs(velocityDotVector) > 0.0001) {
+          const force = Math.min(
+            velocityDotVector * this.forceMultiplier,
+            this.maxForce
           );
           
-          // Гидравлический подъём (плавно но быстро реагирует)
-          gsap.to(mesh.userData, {
-            currentAmplitude: amplitude,
-            duration: 0.8,
-            ease: "power2.out"
-          });
-          
-          // Гидравлический возврат с волновой задержкой и пружинистостью
-          // Каждый блок движется с небольшой задержкой относительно предыдущего
-          gsap.to(mesh.userData, {
-            currentAmplitude: 0,
-            duration: this.returnDuration,
-            delay: this.returnDelay + (index * this.waveDelay),
-            ease: `sine.inOut`,
-            overwrite: true // Перебивает предыдущие анимации
-          });
+          // Применяем силу в направлении вектора
+          body.applyForce(
+            new CANNON.Vec3(
+              pushVector.x * force,
+              pushVector.y * force,
+              pushVector.z * force
+            ),
+            body.position
+          );
         }
-        
-        // Применяем текущее смещение по вектору
-        const offset = pushVector.clone().multiplyScalar(mesh.userData.currentAmplitude);
-        mesh.position.addVectors(mesh.userData.initialPosition, offset);
+      }
+      
+      // Синхронизируем позицию меша с физическим телом
+      const mesh = this.meshes.find(m => m.userData.physicsIndex === index);
+      if (mesh && mesh.userData.originalPosition) {
+        mesh.position.set(
+          body.position.x,
+          body.position.y,
+          body.position.z
+        );
       }
     });
 
@@ -356,11 +350,7 @@ export default class MyModel {
 
     // Добавляем T-меш из сцены
     this.scene.traverse((child) => {
-      if (
-        child.isMesh &&
-        child.geometry &&
-        child.material.color?.equals(new THREE.Color(0x00ff00))
-      ) {
+      if (child.isMesh && child.geometry && child.material.color?.equals(new THREE.Color(0x00ff00))) {
         const meshBox = new THREE.Box3().setFromObject(child);
         box.union(meshBox);
         hasObjects = true;
