@@ -7,6 +7,7 @@ import {
   HEXAGON_2_POSITION,
   HEXAGON_2_LABEL,
 } from "./Config/HexagonPositions.js";
+import OrbitalHexagonGUI from "./OrbitalHexagonGUI.js";
 
 export default class World {
   constructor(scene) {
@@ -81,8 +82,7 @@ export default class World {
     );
     this.items.push(this.backlightHexagon1);
 
-    // Шестиугольник 2: дальний, в соседней декарте
-    // Координаты в Config/HexagonPositions.js
+    // Шестиугольник 2: дальний, в соседней декарте (орбитальный)
     const position2 = new THREE.Vector3(
       HEXAGON_2_POSITION.x,
       HEXAGON_2_POSITION.y,
@@ -95,6 +95,12 @@ export default class World {
       HEXAGON_2_LABEL
     );
     this.items.push(this.backlightHexagon2);
+
+    // GUI для орбитального вращения второго шестиугольника
+    this.orbitalGUI = new OrbitalHexagonGUI(
+      this.backlightHexagon2,
+      position2
+    );
   }
 
   setupLightsGUI() {
