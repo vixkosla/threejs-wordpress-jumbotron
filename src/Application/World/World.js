@@ -106,7 +106,19 @@ export default class World {
   }
 
   setupLightsGUI() {
-    const gui = new GUI({ title: "Scene Lights" });
+    const gui = new GUI({ 
+      title: "Scene Lights",
+      container: document.querySelector('body')
+    });
+    
+    // Перемещаем GUI в правый нижний угол
+    if (gui.domElement) {
+      gui.domElement.style.position = 'fixed';
+      gui.domElement.style.top = 'auto';
+      gui.domElement.style.bottom = '0';
+      gui.domElement.style.right = '0';
+      gui.domElement.style.left = 'auto';
+    }
 
     const folderAmbient = gui.addFolder("Ambient Light");
     folderAmbient.addColor(this.lightParams, "ambientColor")

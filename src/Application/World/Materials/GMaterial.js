@@ -143,7 +143,18 @@ export default class GMaterial {
    * Настроить GUI для отладки
    */
   setupGUI() {
-    this.gui = new GUI({ title: "G Material" });
+    this.gui = new GUI({ 
+      title: "G Material",
+      container: document.querySelector('body')
+    });
+    
+    // Перемещаем GUI в правый верхний угол
+    if (this.gui.domElement) {
+      this.gui.domElement.style.position = 'fixed';
+      this.gui.domElement.style.top = '0';
+      this.gui.domElement.style.right = '0';
+      this.gui.domElement.style.left = 'auto';
+    }
     
     const folderMain = this.gui.addFolder("Основное");
     folderMain.add(this.params, "transmission", 0, 1, 0.01)

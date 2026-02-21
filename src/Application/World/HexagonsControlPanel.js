@@ -91,7 +91,19 @@ export default class HexagonsControlPanel {
   }
 
   setupGUI() {
-    this.gui = new GUI({ title: "🔷 Hexagons Control", width: 320 });
+    this.gui = new GUI({ 
+      title: "🔷 Hexagons Control",
+      width: 300,
+      container: document.querySelector('body')
+    });
+    
+    // Перемещаем GUI в левый верхний угол
+    if (this.gui.domElement) {
+      this.gui.domElement.style.position = 'fixed';
+      this.gui.domElement.style.top = '0';
+      this.gui.domElement.style.left = '0';
+      this.gui.domElement.style.right = 'auto';
+    }
 
     // === ПАПКА 1: ОРБИТЫ (одновременно оба) ===
     const folderOrbits = this.gui.addFolder("🌍 Орбиты (оба шестиугольника)");
