@@ -106,19 +106,22 @@ export default class MyModel {
     ];
     
     // Чувствительность к ускорению мыши (гидравлика)
-    this.sensitivity = 1.5;
+    this.sensitivity = 2.5;
     
     // Максимальная амплитуда "взмаха"
-    this.maxAmplitude = 4.0;
+    this.maxAmplitude = 5.0;
     
     // Длительность возврата (секунды) - "гидравлика" (медленно)
-    this.returnDuration = 3.0;
+    this.returnDuration = 2.5;
     
     // Задержка перед возвратом (гидравлическая пауза)
-    this.returnDelay = 0.5;
+    this.returnDelay = 0.3;
     
     // Волновая задержка между блоками (секунды)
-    this.waveDelay = 0.1;
+    this.waveDelay = 0.08;
+    
+    // Пружинистость возврата (0-1, меньше = более плавный)
+    this.returnElasticity = 0.7;
     
     // Храним GSAP твины для каждого блока
     this.blockTweens = [];
@@ -297,27 +300,28 @@ export default class MyModel {
           this.mouseVelocity.y * pushVector.y;
         
         // Если есть ускорение в направлении вектора — запускаем "гидравлический взмах"
-        if (velocityDotVector > 0.001) {
+        if (velocityDotVector > 0.0005) {  // Более чувствительный порог
           // Вычисляем амплитуду на основе ускорения
           const amplitude = Math.min(
             velocityDotVector * this.sensitivity,
             this.maxAmplitude
           );
           
-          // Гидравлический подъём (очень плавно, медленно)
+          // Гидравлический подъём (плавно но быстро реагирует)
           gsap.to(mesh.userData, {
             currentAmplitude: amplitude,
-            duration: 1.2,
-            ease: "power1.inOut"
+            duration: 0.8,
+            ease: "power2.out"
           });
           
-          // Гидравлический возврат с волновой задержкой
+          // Гидравлический возврат с волновой задержкой и пружинистостью
           // Каждый блок движется с небольшой задержкой относительно предыдущего
           gsap.to(mesh.userData, {
             currentAmplitude: 0,
             duration: this.returnDuration,
             delay: this.returnDelay + (index * this.waveDelay),
-            ease: "sine.inOut" // Синусоидальный плавный возврат
+            ease: `sine.inOut`,
+            overwrite: true // Перебивает предыдущие анимации
           });
         }
         
