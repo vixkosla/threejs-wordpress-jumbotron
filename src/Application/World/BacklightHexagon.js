@@ -24,15 +24,8 @@ export default class BacklightHexagon {
       addLightIntensity: 30,     // интенсивность заднего света (усилено)
     };
 
-    // Позиция: зеркально камере относительно (0,0,0)
-    // Камера на (8, 3, -8) → шестиугольник на (-8, -3, 8)
-    if (positionOffset) {
-      // Если есть смещение, используем его
-      this.position = new THREE.Vector3().copy(positionOffset);
-    } else {
-      // По умолчанию зеркально камере
-      this.position = new THREE.Vector3(-8, -3, 8);
-    }
+    // Позиция: передаётся извне
+    this.position = positionOffset ? new THREE.Vector3().copy(positionOffset) : new THREE.Vector3(0, 0, 10);
     this.lookAtTarget = new THREE.Vector3(0, 0, 0);
 
     // Рассчитываем размер шестиугольника от bounding box
@@ -151,32 +144,8 @@ export default class BacklightHexagon {
    * Настроить GUI
    */
   setupGUI() {
-    const title = this.label ? `Backlight ${this.label}` : "Backlight Hexagon";
-    this.gui = new GUI({ title });
-
-    const folderLight = this.gui.addFolder("Backlight");
-    folderLight.add(this.params, "intensity", 0, 30, 0.5)
-      .name("RectArea Intensity")
-      .onChange(() => this.updateFromParams());
-
-    folderLight.add(this.params, "addLightBehind")
-      .name("Add Back Light")
-      .onChange(() => this.updateFromParams());
-    folderLight.add(this.params, "addLightIntensity", 0, 50, 1)
-      .name("Back Light Intensity")
-      .onChange(() => this.updateFromParams());
-
-    const folderHex = this.gui.addFolder("Hexagon");
-    folderHex.add(this.params, "hexagonOpacity", 0, 1, 0.05)
-      .name("Opacity")
-      .onChange(() => this.updateFromParams());
-    folderHex.add(this.params, "hexagonVisible")
-      .name("Visible")
-      .onChange(() => this.updateFromParams());
-
-    // Кнопка сброса
-    this.gui.add({ reset: () => this.resetParams() }, "reset")
-      .name("↻ Reset");
+    // GUI создаётся только если нет внешнего контроллера (OrbitalHexagonGUI)
+    // Чтобы не дублировать панели
   }
 
   resetParams() {

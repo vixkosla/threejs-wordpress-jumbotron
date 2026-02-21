@@ -15,6 +15,8 @@ export default class OrbitalHexagonGUI {
       radius: 12,                    // радиус орбиты
       azimuth: 0,                    // угол в XZ плоскости (0-360°)
       elevation: 0,                  // угол возвышения (-90° до 90°)
+      lightIntensity: 15,            // сила света (синхронизировано с hexagon.params.intensity)
+      backLightIntensity: 30,        // задний свет (синхронизировано с hexagon.params.addLightIntensity)
     };
 
     // Сохраняем начальную позицию
@@ -22,6 +24,10 @@ export default class OrbitalHexagonGUI {
 
     // Вычисляем начальные углы из позиции
     this.updateParamsFromPosition();
+
+    // Синхронизируем интенсивность света
+    this.params.lightIntensity = this.hexagon.params.intensity;
+    this.params.backLightIntensity = this.hexagon.params.addLightIntensity;
 
     this.setupGUI();
     this.updatePosition();
@@ -63,6 +69,15 @@ export default class OrbitalHexagonGUI {
   }
 
   /**
+   * Обновить интенсивность света
+   */
+  updateLight() {
+    this.hexagon.params.intensity = this.params.lightIntensity;
+    this.hexagon.params.addLightIntensity = this.params.backLightIntensity;
+    this.hexagon.updateFromParams();
+  }
+
+  /**
    * Быстрая установка позиции по углу (4 декарты)
    */
   setQuickPosition(decart) {
@@ -93,13 +108,24 @@ export default class OrbitalHexagonGUI {
       .name("Радиус (R)")
       .onChange(() => this.updatePosition());
 
-    folderOrbit.add(this.params, "azimuth", -180, 180, 5)
+    folderOrbit.add(this.params, "azimuth", -180, 180, 0.5)
       .name("Azimuth (°)")
       .onChange(() => this.updatePosition());
 
-    folderOrbit.add(this.params, "elevation", -90, 90, 5)
+    folderOrbit.add(this.params, "elevation", -90, 90, 0.5)
       .name("Elevation (°)")
       .onChange(() => this.updatePosition());
+
+    // Интенсивность света
+    const folderLight = this.gui.addFolder("Свет шестиугольника");
+    
+    folderLight.add(this.params, "lightIntensity", 0, 30, 0.5)
+      .name("RectArea Intensity")
+      .onChange(() => this.updateLight());
+    
+    folderLight.add(this.params, "backLightIntensity", 0, 50, 1)
+      .name("Back Light Intensity")
+      .onChange(() => this.updateLight());
 
     // Кнопки быстрых позиций (4 декарты)
     const folderQuick = this.gui.addFolder("Быстро (4 декарты)");
@@ -139,6 +165,8 @@ export default class OrbitalHexagonGUI {
     this.gui.add({ 
       reset: () => {
         this.updateParamsFromPosition();
+        this.params.lightIntensity = this.hexagon.params.intensity;
+        this.params.backLightIntensity = this.hexagon.params.addLightIntensity;
         this.updatePosition();
         this.updateGUI();
       }
@@ -166,6 +194,16 @@ export default class OrbitalHexagonGUI {
       x: this.hexagon.position.x,
       y: this.hexagon.position.y,
       z: this.hexagon.position.z,
+    };
+  }
+
+  /**
+   * Получить текущие параметры света (для сохранения в конфиг)
+   */
+  getLightParams() {
+    return {
+      intensity: this.params.lightIntensity,
+      backLightIntensity: this.params.backLightIntensity,
     };
   }
 
