@@ -96,19 +96,23 @@ export default class MyModel {
     // Параметры анимации (как в r3f-rapier-ball-of-glass)
     this.ease = 0.05;        // Скорость интерполяции (увеличено)
     this.friction = 0.05;    // Затухание (инерция, уменьшено для плавности)
-    
-    // Множитель амплитуды
-    this.amplitudeMultiplier = 15;  // Увеличено для заметности
-    
+
+    // Множитель амплитуды (уменьшено чтобы блоки не пересекались)
+    this.amplitudeMultiplier = 8;
+
     // Для каждого блока: target (накапливает) и current (текущее)
     this.blockTargets = [];
     this.blockCurrents = [];
-    
+
     // Инициализация
     for (let i = 0; i < 6; i++) {
       this.blockTargets.push(new THREE.Vector3(0, 0, 0));
       this.blockCurrents.push(new THREE.Vector3(0, 0, 0));
     }
+
+    // Ограничения амплитуды (чтобы блоки не проходили сквозь друг друга)
+    this.minOffset = -1.0;  // Минимальное смещение
+    this.maxOffset = 1.5;   // Максимальное смещение
 
     this.composeCube();
     
@@ -292,6 +296,11 @@ export default class MyModel {
       current.x = this.lerp(current.x, target.x, this.ease);
       current.y = this.lerp(current.y, target.y, this.ease);
       current.z = this.lerp(current.z, target.z, this.ease);
+      
+      // Ограничиваем current чтобы блоки не проходили сквозь друг друга
+      current.x = Math.max(this.minOffset, Math.min(current.x, this.maxOffset));
+      current.y = Math.max(this.minOffset, Math.min(current.y, this.maxOffset));
+      current.z = Math.max(this.minOffset, Math.min(current.z, this.maxOffset));
       
       // Применяем смещение к мешу
       const mesh = this.meshes[i];
