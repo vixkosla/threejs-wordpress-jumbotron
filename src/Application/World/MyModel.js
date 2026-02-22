@@ -94,14 +94,17 @@ export default class MyModel {
     ];
     
     // Параметры анимации (как в r3f-rapier-ball-of-glass)
-    this.ease = 0.05;        // Скорость интерполяции (увеличено)
-    this.friction = 0.05;    // Затухание (инерция, уменьшено для плавности)
+    this.ease = 0.1;         // Скорость интерполяции (увеличено)
+    this.friction = 0.02;    // Затухание (инерция, уменьшено для плавности)
 
-    // Множитель амплитуды (уменьшено чтобы блоки не пересекались)
-    this.amplitudeMultiplier = 8;
+    // Множитель амплитуды (увеличено для чувствительности)
+    this.amplitudeMultiplier = 12;
     
-    // Мёртвая зона мыши (20% от высоты экрана)
-    this.deadZone = 0.2;
+    // Мёртвая зона мыши (уменьшено для чувствительности)
+    this.deadZone = 0.05;
+    
+    // Stagger задержка для каждого блока (секунды)
+    this.staggerDelays = [0, 0.1, 0.2, 0.3, 0.4, 0.5];
 
     // Для каждого блока: target (накапливает) и current (текущее)
     this.blockTargets = [];
@@ -112,6 +115,9 @@ export default class MyModel {
       this.blockTargets.push(new THREE.Vector3(0, 0, 0));
       this.blockCurrents.push(new THREE.Vector3(0, 0, 0));
     }
+    
+    // Для stagger анимации
+    this.staggerCurrents = [0, 0, 0, 0, 0, 0]; // Текущая задержка для каждого блока
 
     // Ограничения амплитуды (чтобы блоки не проходили сквозь друг друга)
     this.minOffset = -1.0;  // Минимальное смещение
@@ -142,9 +148,14 @@ export default class MyModel {
     this.mouseDelta.x = this.mouse.x - this.prevMouse.x;
     this.mouseDelta.y = this.mouse.y - this.prevMouse.y;
     
-    // Применяем мёртвую зону (20% от центра)
+    // Применяем мёртвую зону (5% от центра для чувствительности)
     if (Math.abs(this.mouseDelta.x) < this.deadZone) this.mouseDelta.x = 0;
     if (Math.abs(this.mouseDelta.y) < this.deadZone) this.mouseDelta.y = 0;
+    
+    // Если есть движение — сбрасываем stagger
+    if (this.mouseDelta.x !== 0 || this.mouseDelta.y !== 0) {
+      this.staggerCurrents = [0, 0, 0, 0, 0, 0];
+    }
     
     // Накпливаем target для каждого блока
     for (let i = 0; i < 6; i++) {
@@ -292,20 +303,29 @@ export default class MyModel {
 
   // Вызывается каждый кадр
   update(time) {
-    // Плавная интерполяция как в useAnimatableVec3
+    // Плавная интерполяция как в useAnimatableVec3 со stagger эффектом
     for (let i = 0; i < 6; i++) {
       const target = this.blockTargets[i];
       const current = this.blockCurrents[i];
       
-      // Затухание target к нулю (инерция)
-      target.x = this.lerp(target.x, 0, this.friction);
-      target.y = this.lerp(target.y, 0, this.friction);
-      target.z = this.lerp(target.z, 0, this.friction);
+      // Stagger: обновляем задержку
+      const staggerDelay = this.staggerDelays[i];
+      this.staggerCurrents[i] += 0.016; // ~60 FPS
       
-      // Плавная интерполяция current к target
-      current.x = this.lerp(current.x, target.x, this.ease);
-      current.y = this.lerp(current.y, target.y, this.ease);
-      current.z = this.lerp(current.z, target.z, this.ease);
+      // Применяем затухание только если stagger активирован
+      const staggerActive = this.staggerCurrents[i] >= staggerDelay;
+      
+      if (staggerActive) {
+        // Затухание target к нулю (инерция)
+        target.x = this.lerp(target.x, 0, this.friction);
+        target.y = this.lerp(target.y, 0, this.friction);
+        target.z = this.lerp(target.z, 0, this.friction);
+        
+        // Плавная интерполяция current к target
+        current.x = this.lerp(current.x, target.x, this.ease);
+        current.y = this.lerp(current.y, target.y, this.ease);
+        current.z = this.lerp(current.z, target.z, this.ease);
+      }
       
       // Ограничиваем current чтобы блоки не проходили сквозь друг друга
       current.x = Math.max(this.minOffset, Math.min(current.x, this.maxOffset));
