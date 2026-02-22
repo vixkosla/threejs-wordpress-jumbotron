@@ -97,8 +97,8 @@ export default class MyModel {
     this.ease = 0.08;        // Скорость интерполяции (плавно)
     this.friction = 0.03;    // Затухание (инерция, плавно)
 
-    // Множитель амплитуды (4x для плавности)
-    this.amplitudeMultiplier = 4;
+    // Множитель амплитуды (1.5x для мягкости)
+    this.amplitudeMultiplier = 1.5;
     
     // Мёртвая зона мыши (чувствительно)
     this.deadZone = 0.05;
