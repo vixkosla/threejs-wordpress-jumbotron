@@ -94,8 +94,11 @@ export default class MyModel {
     ];
     
     // Параметры анимации (как в r3f-rapier-ball-of-glass)
-    this.ease = 0.02;        // Скорость интерполяции
-    this.friction = 0.1;     // Затухание (инерция)
+    this.ease = 0.05;        // Скорость интерполяции (увеличено)
+    this.friction = 0.05;    // Затухание (инерция, уменьшено для плавности)
+    
+    // Множитель амплитуды
+    this.amplitudeMultiplier = 15;  // Увеличено для заметности
     
     // Для каждого блока: target (накапливает) и current (текущее)
     this.blockTargets = [];
@@ -108,6 +111,10 @@ export default class MyModel {
     }
 
     this.composeCube();
+    
+    // Сохраняем оригинальные позиции ДО translateBlocks
+    this.originalPositions = this.meshes.map(mesh => mesh.position.clone());
+    
     this.translateBlocks();
   }
 
@@ -149,9 +156,6 @@ export default class MyModel {
       g.rotation.set(...info.rotation);
       g.scale.set(0.8, 0.8, 0.8);
       
-      // Сохраняем оригинальную позицию для анимации
-      g.userData.originalPosition = g.position.clone();
-      
       this.meshes.push(g);
       this.group.add(g);
       this.scene.add(g);
@@ -162,9 +166,6 @@ export default class MyModel {
       t.position.set(...info.position);
       t.rotation.set(...info.rotation);
       t.scale.set(0.85, 0.85, 0.85);
-      
-      // Сохраняем оригинальную позицию
-      t.userData.originalPosition = t.position.clone();
       
       this.scene.add(t);
     });
@@ -294,10 +295,11 @@ export default class MyModel {
       
       // Применяем смещение к мешу
       const mesh = this.meshes[i];
-      if (mesh && mesh.userData.originalPosition) {
-        mesh.position.x = mesh.userData.originalPosition.x + current.x;
-        mesh.position.y = mesh.userData.originalPosition.y + current.y;
-        mesh.position.z = mesh.userData.originalPosition.z + current.z;
+      if (mesh && this.originalPositions[i]) {
+        // Смещение с множителем амплитуды
+        mesh.position.x = this.originalPositions[i].x + current.x * this.amplitudeMultiplier;
+        mesh.position.y = this.originalPositions[i].y + current.y * this.amplitudeMultiplier;
+        mesh.position.z = this.originalPositions[i].z + current.z * this.amplitudeMultiplier;
       }
     }
 
