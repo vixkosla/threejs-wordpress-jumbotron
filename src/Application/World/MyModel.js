@@ -99,6 +99,9 @@ export default class MyModel {
 
     // Множитель амплитуды (уменьшено чтобы блоки не пересекались)
     this.amplitudeMultiplier = 8;
+    
+    // Мёртвая зона мыши (20% от высоты экрана)
+    this.deadZone = 0.2;
 
     // Для каждого блока: target (накапливает) и current (текущее)
     this.blockTargets = [];
@@ -113,6 +116,9 @@ export default class MyModel {
     // Ограничения амплитуды (чтобы блоки не проходили сквозь друг друга)
     this.minOffset = -1.0;  // Минимальное смещение
     this.maxOffset = 1.5;   // Максимальное смещение
+    
+    // Смещение в покое (опускаем все блоки)
+    this.restOffset = new THREE.Vector3(0, -2, 0);
 
     this.composeCube();
     
@@ -135,6 +141,10 @@ export default class MyModel {
     // Вычисляем дельту (как useMouseMoveDelta)
     this.mouseDelta.x = this.mouse.x - this.prevMouse.x;
     this.mouseDelta.y = this.mouse.y - this.prevMouse.y;
+    
+    // Применяем мёртвую зону (20% от центра)
+    if (Math.abs(this.mouseDelta.x) < this.deadZone) this.mouseDelta.x = 0;
+    if (Math.abs(this.mouseDelta.y) < this.deadZone) this.mouseDelta.y = 0;
     
     // Накпливаем target для каждого блока
     for (let i = 0; i < 6; i++) {
@@ -302,12 +312,11 @@ export default class MyModel {
       current.y = Math.max(this.minOffset, Math.min(current.y, this.maxOffset));
       current.z = Math.max(this.minOffset, Math.min(current.z, this.maxOffset));
       
-      // Применяем смещение к мешу
+      // Применяем смещение к мешу + смещение в покое
       const mesh = this.meshes[i];
       if (mesh && this.originalPositions[i]) {
-        // Смещение с множителем амплитуды
         mesh.position.x = this.originalPositions[i].x + current.x * this.amplitudeMultiplier;
-        mesh.position.y = this.originalPositions[i].y + current.y * this.amplitudeMultiplier;
+        mesh.position.y = this.originalPositions[i].y + this.restOffset.y + current.y * this.amplitudeMultiplier;
         mesh.position.z = this.originalPositions[i].z + current.z * this.amplitudeMultiplier;
       }
     }
