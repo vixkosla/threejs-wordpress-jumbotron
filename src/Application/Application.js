@@ -35,8 +35,8 @@ export default class Application {
       0.1,
       100,
     );
-    // Позиция камеры: как при FOV 10-15 (изометрический вид)
-    this.camera.position.set(13, 6, -15);
+    // Позиция камеры из сохранения (hexagon-settings (10).js от 2026-02-23T01:14:53.655Z)
+    this.camera.position.set(6.320308439648348, 5.362628357729717, -6.5044872946773875);
     this.camera.lookAt(0, 0, 0);
     this.scene.add(this.camera);
   }
