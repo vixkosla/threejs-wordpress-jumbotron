@@ -21,11 +21,15 @@ export default class World {
     this.showAxes = true;
     this.showGrid = true;
 
+    // EnvMap (HDRI карта окружения для transmission материалов)
+    this.envMap = null;
+
     this.setupLights();
     this.setupHelpers();
     this.setupObjects();
     this.setupBacklight();
     this.setupLightsGUI();
+    this.loadEnvMap(); // Загружаем HDRI карту
   }
 
   setupLights() {
@@ -33,21 +37,79 @@ export default class World {
     this.ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
     this.scene.add(this.ambientLight);
 
-    // Directional light
-    this.directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
-    this.directionalLight.position.set(5, 5, 5);
+    // Directional light (основной источник света)
+    this.directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    this.directionalLight.position.set(10, 15, 10);
+    this.directionalLight.castShadow = true;
+    
+    // Настройки теней для высокого качества
+    this.directionalLight.shadow.mapSize.width = 2048;   // Высокое разрешение карты теней
+    this.directionalLight.shadow.mapSize.height = 2048;  // Высокое разрешение карты теней
+    this.directionalLight.shadow.camera.near = 0.5;      // Ближняя плоскость
+    this.directionalLight.shadow.camera.far = 50;        // Дальняя плоскость
+    this.directionalLight.shadow.camera.left = -10;      // Границы камеры теней
+    this.directionalLight.shadow.camera.right = 10;
+    this.directionalLight.shadow.camera.top = 10;
+    this.directionalLight.shadow.camera.bottom = -10;
+    this.directionalLight.shadow.bias = -0.0001;         // Смещение для устранения артефактов
+    this.directionalLight.shadow.normalBias = 0.02;     // Нормальное смещение для quality
+    
     this.scene.add(this.directionalLight);
+
+    // Дополнительный заполняющий свет (fill light)
+    const fillLight = new THREE.DirectionalLight(0xffffff, 0.3);
+    fillLight.position.set(-5, 5, -5);
+    this.scene.add(fillLight);
 
     // Параметры для GUI
     this.lightParams = {
       ambientIntensity: 0.3,
       ambientColor: 0xffffff,
-      directionalIntensity: 0.5,
+      directionalIntensity: 0.8,
       directionalColor: 0xffffff,
-      directionalX: 5,
-      directionalY: 5,
-      directionalZ: 5,
+      directionalX: 10,
+      directionalY: 15,
+      directionalZ: 10,
     };
+  }
+
+  /**
+   * Загрузить HDRI карту окружения для transmission материалов
+   */
+  loadEnvMap() {
+    // Создаём тёмную карту окружения (градиент для отражений)
+    // Это нужно для правильного отображения transmission материалов
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+    
+    // Чёрный фон с тёмным градиентом
+    const gradient = ctx.createLinearGradient(0, 0, 0, 256);
+    gradient.addColorStop(0, '#000000');   // Чёрный верх
+    gradient.addColorStop(0.5, '#0a0a0a'); // Тёмно-серый средний
+    gradient.addColorStop(1, '#000000');   // Чёрный низ
+    
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 512, 256);
+    
+    // Добавляем несколько ярких "звёзд" для ориентиров в отражениях
+    ctx.fillStyle = '#333333';
+    for (let i = 0; i < 30; i++) {
+      const x = Math.random() * 512;
+      const y = Math.random() * 256;
+      const size = Math.random() * 2;
+      ctx.fillRect(x, y, size, size);
+    }
+    
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.mapping = THREE.EquirectangularReflectionMapping;
+    this.scene.environment = texture;
+    this.envMap = texture;
+    
+    console.log('✓ Тёмная карта окружения создана (Canvas)');
+    console.log('  - transmission материалы теперь отображают окружение');
+    console.log('  - цвет материала (Color GUI) теперь виден');
   }
 
   setupHelpers() {
@@ -120,7 +182,8 @@ export default class World {
       this.backlightHexagon3,
       position1,
       position2,
-      position3
+      position3,
+      boundingBox  // Передаём boundingBox для вычисления центра вращения
     );
   }
 

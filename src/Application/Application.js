@@ -20,7 +20,7 @@ export default class Application {
 
   setupScene() {
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x222222);
+    this.scene.background = new THREE.Color(0x000000); // Чёрный фон
   }
 
   setupCamera() {
@@ -36,7 +36,7 @@ export default class Application {
       100,
     );
     // Позиция камеры: как при FOV 10-15 (изометрический вид)
-    this.camera.position.set(8, 3, -8);
+    this.camera.position.set(13, 6, -15);
     this.camera.lookAt(0, 0, 0);
     this.scene.add(this.camera);
   }
@@ -52,9 +52,17 @@ export default class Application {
     // Включаем поддержку RectAreaLight
     this.renderer.useLegacyLights = false;
 
+    // Включаем тени высокого качества
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Мягкие тени
+
     // Контролы (опционально)
     this.controls = new OrbitControls(this.camera, this.canvas);
     this.controls.enableDamping = true;
+    
+    // Сохраняем ссылку на камеру для доступа извне
+    window.APP_CAMERA = this.camera;
+    window.APP_CONTROLS = this.controls;
   }
 
   setupWorld() {
@@ -87,12 +95,12 @@ export default class Application {
    */
   setupMouseTracking() {
     this.mouse = new THREE.Vector2(0, 0); // Нормализованные координаты (-1 до 1)
-    
+
     window.addEventListener("mousemove", (event) => {
       // Нормализуем координаты мыши от -1 до 1
       this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
       this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-      
+
       // Передаём позицию мыши в мир
       if (this.world) {
         this.world.updateMousePosition(this.mouse);

@@ -2,7 +2,7 @@ import * as THREE from "three";
 import PositionMarker from "./PositionMarker.js";
 
 /**
- * Шестиугольник-подсветка (только свет + маркер позиции)
+ * Шестиугольник-подсветка (только свет + маркер позиции + хелперы)
  * Геометрия шестиугольника убрана - остался только источник света
  */
 export default class BacklightHexagon {
@@ -15,7 +15,8 @@ export default class BacklightHexagon {
       intensity: 15,             // сила света RectAreaLight
       addLightBehind: true,      // дополнительный свет сзади для transmission
       addLightIntensity: 30,     // интенсивность заднего света
-      showMarker: true,          // показывать маркер позиции
+      showMarker: false,         // показывать маркер позиции (false по умолчанию)
+      showHelpers: false,        // показывать хелперы (false по умолчанию)
     };
 
     // Позиция: передаётся извне
@@ -29,17 +30,89 @@ export default class BacklightHexagon {
     this.rectLight = this.createRectAreaLight();
     this.group.add(this.rectLight);
 
-    // Дополнительный PointLight сзади для transmission эффекта
+    // Хелпер для RectAreaLight (показывает панель света - рамка)
+    this.rectLightHelper = this.createRectAreaLightHelper();
+    this.rectLightHelper.visible = false;  // Скрыт по умолчанию
+    this.group.add(this.rectLightHelper);
+
+    // Дополнительный DirectionalLight сзади для transmission эффекта
+    // Светит в том же направлении что и RectAreaLight (к центру композиции)
     this.backLight = this.createBackLight();
     this.group.add(this.backLight);
+
+    // Хелпер для DirectionalLight (конус направления)
+    this.backLightHelper = this.createDirectionalLightHelper();
+    this.backLightHelper.visible = false;  // Скрыт по умолчанию
+    this.group.add(this.backLightHelper);
 
     this.group.position.copy(this.position);
     this.group.lookAt(this.lookAtTarget);
 
     this.scene.add(this.group);
 
-    // Маркер позиции (чёрная точка)
-    this.marker = new PositionMarker(scene, this.position);
+    // Маркер позиции (цветная сфера) - цвет зависит от label
+    const markerColor = this.getMarkerColor(label);
+    this.marker = new PositionMarker(scene, this.position, markerColor);
+    this.marker.setVisible(false); // Скрыт по умолчанию
+    
+    // Применяем настройки сразу после создания
+    this.updateFromParams();
+  }
+
+  /**
+   * Получить цвет маркера по названию шестиугольника
+   */
+  getMarkerColor(label) {
+    if (label.includes("Front")) return 0xff0000;  // 🔴 Красный (передний)
+    if (label.includes("Left")) return 0x00ff00;   // 🟢 Зелёный (левый)
+    if (label.includes("Right")) return 0x0000ff;  // 🔵 Синий (правый)
+    return 0x000000;  // Чёрный (по умолчанию)
+  }
+
+  /**
+   * Создать DirectionalLight (направленный свет как солнце)
+   */
+  createBackLight() {
+    const intensity = this.params.addLightIntensity;
+    const light = new THREE.DirectionalLight(0xffffff, intensity);
+    light.position.set(0, 0, 3);  // Сзади RectAreaLight
+    light.lookAt(0, 0, -10);  // Светит в том же направлении (к центру)
+    return light;
+  }
+
+  /**
+   * Создать хелпер для DirectionalLight (конус направления)
+   */
+  createDirectionalLightHelper() {
+    // Создаём конус показывающий направление света
+    const coneGeometry = new THREE.ConeGeometry(0.5, 2, 8);
+    const coneMaterial = new THREE.MeshBasicMaterial({
+      color: 0x00ffff,  // 🟦 Циан для DirectionalLight
+      transparent: true,
+      opacity: 0.6,
+    });
+    const cone = new THREE.Mesh(coneGeometry, coneMaterial);
+    cone.position.set(0, 0, 3);  // Позиция DirectionalLight
+    cone.rotation.x = Math.PI;  // Поворот в направлении света
+    return cone;
+  }
+
+  /**
+   * Создать хелпер для RectAreaLight (рамка панели)
+   */
+  createRectAreaLightHelper() {
+    // Создаём рамку (edges) для визуализации панели света
+    const geometry = new THREE.PlaneGeometry(12, 12);
+    const edges = new THREE.EdgesGeometry(geometry);
+    const material = new THREE.LineBasicMaterial({
+      color: 0xffffff,  // Белая рамка
+      transparent: true,
+      opacity: 0.5,
+    });
+    const helper = new THREE.LineSegments(edges, material);
+    helper.position.set(0, 0, 0.5);  // Позиция RectAreaLight
+    helper.rotation.x = Math.PI;  // Поворот лицом к камере
+    return helper;
   }
 
   /**
@@ -58,9 +131,10 @@ export default class BacklightHexagon {
   }
 
   createRectAreaLight() {
-    // Размер не важен, так как геометрии нет
+    // RectAreaLight — это плоская прямоугольная поверхность света
+    // Размер влияет на площадь освещения (чем больше, тем шире светит)
     const intensity = this.params.intensity;
-    const light = new THREE.RectAreaLight(0xffffff, intensity, 4, 4);
+    const light = new THREE.RectAreaLight(0xffffff, intensity, 12, 12); // 12x12 (в 3 раза больше)
     light.position.set(0, 0, 0.5);
     light.lookAt(0, 0, -1);
     return light;
@@ -80,7 +154,26 @@ export default class BacklightHexagon {
     this.rectLight.intensity = this.params.intensity;
     this.backLight.intensity = this.params.addLightIntensity;
     this.backLight.visible = this.params.addLightBehind;
+    this.rectLightHelper.visible = this.params.showHelpers;
+    this.backLightHelper.visible = this.params.showHelpers;
     this.marker.setVisible(this.params.showMarker);
+  }
+
+  /**
+   * Включить/выключить маркер (из GUI)
+   */
+  setMarkerVisible(visible) {
+    this.params.showMarker = visible;
+    this.marker.setVisible(visible);
+  }
+
+  /**
+   * Включить/выключить хелперы (из GUI)
+   */
+  setHelpersVisible(visible) {
+    this.params.showHelpers = visible;
+    this.rectLightHelper.visible = visible;
+    this.backLightHelper.visible = visible;
   }
 
   /**
