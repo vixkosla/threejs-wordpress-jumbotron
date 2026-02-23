@@ -91,21 +91,120 @@ export default class Application {
   }
 
   /**
-   * Отслеживание позиции мыши для анимации
+   * Отслеживание позиции мыши и наклона телефона для анимации
+   * На мобильных устройствах используется гироскоп (DeviceOrientation)
+   * На ПК — мышь
    */
   setupMouseTracking() {
     this.mouse = new THREE.Vector2(0, 0); // Нормализованные координаты (-1 до 1)
+    this.prevMouse = new THREE.Vector2(0, 0); // Для вычисления дельты
+    this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    // Параметры для гироскопа
+    this.gyroBeta = 0;  // Наклон вперёд/назад (-90 до 90)
+    this.gyroGamma = 0; // Наклон влево/вправо (-90 до 90)
+    this.prevGyroBeta = 0;
+    this.prevGyroGamma = 0;
+    this.gyroSensitivity = 0.0008; // Чувствительность гироскопа (коэффициент для дельты)
+    
+    // Запрашиваем разрешение на использование гироскопа (iOS 13+)
+    this.requestDeviceOrientationPermission();
 
-    window.addEventListener("mousemove", (event) => {
-      // Нормализуем координаты мыши от -1 до 1
-      this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-      this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-      // Передаём позицию мыши в мир
-      if (this.world) {
-        this.world.updateMousePosition(this.mouse);
-      }
-    });
+    if (this.isMobile) {
+      // Мобильные: используем гироскоп
+      window.addEventListener("deviceorientation", (event) => {
+        if (event.beta !== null && event.gamma !== null) {
+          this.gyroBeta = event.beta;
+          this.gyroGamma = event.gamma;
+          
+          // Вычисляем дельту наклона (аналогично mouseDelta)
+          const deltaBeta = this.gyroBeta - this.prevGyroBeta;
+          const deltaGamma = this.gyroGamma - this.prevGyroGamma;
+          
+          // Преобразуем дельту наклона в нормализованные значения (-1 до 1)
+          // Коэффициент чувствительности подобран для соответствия силе импульса от мыши
+          this.mouse.x = deltaGamma * this.gyroSensitivity;
+          this.mouse.y = deltaBeta * this.gyroSensitivity;
+          
+          // Ограничиваем диапазон
+          this.mouse.x = Math.max(-1, Math.min(1, this.mouse.x));
+          this.mouse.y = Math.max(-1, Math.min(1, this.mouse.y));
+          
+          // Сохраняем предыдущие значения
+          this.prevGyroBeta = this.gyroBeta;
+          this.prevGyroGamma = this.gyroGamma;
+          
+          // Передаём в мир
+          if (this.world) {
+            this.world.updateMousePosition(this.mouse);
+          }
+        }
+      });
+    } else {
+      // ПК: используем мышь
+      window.addEventListener("mousemove", (event) => {
+        // Нормализуем координаты мыши от -1 до 1
+        const currentMouseX = (event.clientX / window.innerWidth) * 2 - 1;
+        const currentMouseY = -(event.clientY / window.innerHeight) * 2 + 1;
+        
+        // Вычисляем дельту (как в мобильной версии)
+        this.mouse.x = currentMouseX - this.prevMouse.x;
+        this.mouse.y = currentMouseY - this.prevMouse.y;
+        
+        // Сохраняем предыдущую позицию
+        this.prevMouse.x = currentMouseX;
+        this.prevMouse.y = currentMouseY;
+        
+        // Передаём позицию мыши в мир
+        if (this.world) {
+          this.world.updateMousePosition(this.mouse);
+        }
+      });
+    }
+  }
+  
+  /**
+   * Запрос разрешения на использование гироскопа (iOS 13+)
+   */
+  requestDeviceOrientationPermission() {
+    if (typeof DeviceOrientationEvent !== 'undefined' && 
+        typeof DeviceOrientationEvent.requestPermission === 'function') {
+      // iOS 13+ требует запрос разрешения
+      // Добавляем кнопку для запроса (появляется только на iOS)
+      const button = document.createElement('button');
+      button.textContent = 'Разрешить гироскоп';
+      button.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 9999;
+        padding: 20px 40px;
+        font-size: 18px;
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+      `;
+      button.addEventListener('click', async () => {
+        try {
+          const permission = await DeviceOrientationEvent.requestPermission();
+          if (permission === 'granted') {
+            console.log('✓ Разрешение гироскопа получено');
+          } else {
+            console.log('✗ Разрешение гироскопа отклонено');
+          }
+        } catch (error) {
+          console.error('Ошибка запроса гироскопа:', error);
+        }
+        button.remove();
+      });
+      document.body.appendChild(button);
+      
+      // Авто-скрытие кнопки через 5 секунд
+      setTimeout(() => button.remove(), 5000);
+    }
   }
 
   tick() {
