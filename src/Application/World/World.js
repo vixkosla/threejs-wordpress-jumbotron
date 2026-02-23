@@ -188,7 +188,13 @@ export default class World {
   }
 
   setupLightsGUI() {
-    const gui = new GUI({ 
+    // Отключаем GUI на мобильных устройствах
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    if (isMobile) {
+      return;
+    }
+
+    const gui = new GUI({
       title: "Scene Lights",
       container: document.querySelector('body')
     });

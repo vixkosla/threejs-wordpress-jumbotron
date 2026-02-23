@@ -333,7 +333,13 @@ export default class HexagonsControlPanel {
   }
 
   setupGUI() {
-    this.gui = new GUI({ 
+    // Отключаем GUI на мобильных устройствах
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    if (isMobile) {
+      return;
+    }
+
+    this.gui = new GUI({
       title: "🔷 Hexagons Control",
       width: 320,
       container: document.querySelector('body')
