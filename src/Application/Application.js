@@ -56,13 +56,18 @@ export default class Application {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Мягкие тени
 
-    // Контролы (опционально)
-    this.controls = new OrbitControls(this.camera, this.canvas);
-    this.controls.enableDamping = true;
-    
+    // Определяем мобильное устройство
+    this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    // Контролы - ТОЛЬКО для ПК
+    if (!this.isMobile) {
+      this.controls = new OrbitControls(this.camera, this.canvas);
+      this.controls.enableDamping = true;
+      window.APP_CONTROLS = this.controls;
+    }
+
     // Сохраняем ссылку на камеру для доступа извне
     window.APP_CAMERA = this.camera;
-    window.APP_CONTROLS = this.controls;
   }
 
   setupWorld() {
@@ -214,8 +219,10 @@ export default class Application {
     // Обновляем мир (анимации объектов)
     this.world.update(elapsedTime, deltaTime);
 
-    // Обновляем контролы
-    this.controls.update();
+    // Обновляем контролы - ТОЛЬКО для ПК
+    if (this.controls) {
+      this.controls.update();
+    }
 
     // Рендер
     this.renderer.render(this.scene, this.camera);
